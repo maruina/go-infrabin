@@ -1,2 +1,2 @@
 # go-infrabin
-infrabin written in go
+[infrabin](https://github.com/maruina/infrabin) written in go.
