@@ -6,7 +6,7 @@ test:
 	go test -v -race ./...
 
 build:
-	go build -o $(BINARY_NAME) cmd/main.go
+	go build -o $(BINARY_NAME) cmd/$(BINARY_NAME)/main.go
 
 dep:
 	go get ./...
