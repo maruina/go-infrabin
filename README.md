@@ -10,7 +10,7 @@
 
 To override the default values:
 
-* INFRABIN_MAX_DELAY=<INFRABIN_MAX_DELAY> to change the maximum value for the `/delay` endpoint. Default to 120.
+* _INFRABIN_MAX_DELAY_ to change the maximum value for the `/delay` endpoint. Default to 120.
 
 ## Endpoints
 
