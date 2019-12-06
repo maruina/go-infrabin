@@ -6,12 +6,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
 )
 
-// RootHandler handles the "/" path
+// RootHandler handles the "/" endpoint
 func RootHandler(w http.ResponseWriter, r *http.Request) {
 	name, err := os.Hostname()
 	if err != nil {
@@ -23,17 +24,37 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, resp)
 }
 
-// LivenessHandler handles the "/healthcheck/liveness" path
+// LivenessHandler handles the "/healthcheck/liveness" endpoint
 func LivenessHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, `{"status": "liveness probe healthy"}`)
 }
 
+// DelayHandler handles the "/delay" endpoint
+func DelayHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	seconds, err := strconv.Atoi(vars["seconds"])
+	if err != nil {
+		log.Fatalf("cannot convert vars['seconds'] to integer: %v", err)
+	}
+	maxDelay, err := strconv.Atoi(GetEnv("INFRABIN_MAX_DELAY", "120"))
+	if err != nil {
+		log.Fatalf("cannot convert env var INFRABIN_MAX_DELAY to integer: %v", err)
+	}
+	time.Sleep(time.Duration(Min(seconds, maxDelay)) * time.Second)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	resp := fmt.Sprintf(`{"status": "completed", "delay": "%d"}`, seconds)
+	io.WriteString(w, resp)
+}
+
 func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", RootHandler)
+	r.HandleFunc("/delay/{seconds}", DelayHandler)
 	r.HandleFunc("/healthcheck/liveness", LivenessHandler)
 
 	srv := &http.Server{
