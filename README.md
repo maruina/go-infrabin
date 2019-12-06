@@ -6,6 +6,12 @@
 
 [infrabin](https://github.com/maruina/infrabin) written in go.
 
+## Usage
+
+To override the default values:
+
+* INFRABIN_MAX_DELAY=<INFRABIN_MAX_DELAY> to change the maximum value for the `/delay` endpoint. Default to 120.
+
 ## Endpoints
 
 * `GET /`
@@ -15,6 +21,16 @@
     {
         "status": "running",
         "hostname": <hostname>
+    }
+    ```
+
+* `GET /delay/<seconds>`
+  * _returns_: a JSON response
+
+    ```json
+    {
+        "status": "completed",
+        "delay": <seconds>
     }
     ```
 
