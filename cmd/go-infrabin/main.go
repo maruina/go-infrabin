@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	helpers "github.com/maruina/go-infrabin/internal/helpers"
 )
 
 // RootHandler handles the "/" endpoint
@@ -38,11 +39,11 @@ func DelayHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("cannot convert vars['seconds'] to integer: %v", err)
 	}
-	maxDelay, err := strconv.Atoi(GetEnv("INFRABIN_MAX_DELAY", "120"))
+	maxDelay, err := strconv.Atoi(helpers.GetEnv("INFRABIN_MAX_DELAY", "120"))
 	if err != nil {
 		log.Fatalf("cannot convert env var INFRABIN_MAX_DELAY to integer: %v", err)
 	}
-	time.Sleep(time.Duration(Min(seconds, maxDelay)) * time.Second)
+	time.Sleep(time.Duration(helpers.Min(seconds, maxDelay)) * time.Second)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -59,7 +60,7 @@ func main() {
 
 	srv := &http.Server{
 		Handler: r,
-		Addr:    "127.0.0.1:8080",
+		Addr:    "0.0.0.0:8080",
 		// Good practice: enforce timeouts
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
