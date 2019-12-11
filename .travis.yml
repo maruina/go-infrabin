@@ -1,6 +1,40 @@
 language: go
-install: make dep-ci
-script: make test-ci
+go:
+  - 1.12.x
+
 env:
   global:
-    secure: "s1Gacbpu60zQZTdDN2Akke3G3ZrqPoaFtnSfZZqFi3sfLDerZ9GqQuukhnU2KXpjA4DDKN91ZK07SXStcUJR3wImwxSmR8wS99JKeI5751VdZnAs0pfk9i33T6QVhwoeGuPPAGV3LsmQoZfrAc1fCUNyqhP84SkqWGHM1qqldQgaHx8HdepE5ro5Cc4MDhV9mOcdOXc0bOE/RNVHQIWClRn6YyiS7/+S0HhEEaVdWtlB0Zx5YxurSntgCHeluIx5ribqHMcpeVWtyNUB279uBZVpgrAg1xZRXOUhfsksA/iyoWNDevd9ozAnUhVs5tFBFSYVNVg99I3tfDpgMJ+qNL5NURh2bEwtt2T+ze5n3NHcrWz2ZmSbE6qyhwdnDzfAmZXGJVH52ocSnrHOQp3jOi7o4b2DVwi/YSXhr2VoqCKmnt856qCBQWQDtB419hxvhMA2NkEBGyQiM9/qB2xXzA76wIe5ZDCtjuik4KLDF04MEmmnqO76ub67nuwNzf/DlN29bY9EvzzkORRH7FNEdustzZaWpsMc01Xypxas2oyIusGhibDqcDgsYyFllRywdA5P9YA4XpyS/w7eSr+U67eFr5K1vtiV8sON0GMeyUURIGBwgV53VUfOCle8N1nakzrZh++vvPr+IrENQe/qJ6ZWKvjG3fSQVqZG0erDSfQ="
+    - secure: "s1Gacbpu60zQZTdDN2Akke3G3ZrqPoaFtnSfZZqFi3sfLDerZ9GqQuukhnU2KXpjA4DDKN91ZK07SXStcUJR3wImwxSmR8wS99JKeI5751VdZnAs0pfk9i33T6QVhwoeGuPPAGV3LsmQoZfrAc1fCUNyqhP84SkqWGHM1qqldQgaHx8HdepE5ro5Cc4MDhV9mOcdOXc0bOE/RNVHQIWClRn6YyiS7/+S0HhEEaVdWtlB0Zx5YxurSntgCHeluIx5ribqHMcpeVWtyNUB279uBZVpgrAg1xZRXOUhfsksA/iyoWNDevd9ozAnUhVs5tFBFSYVNVg99I3tfDpgMJ+qNL5NURh2bEwtt2T+ze5n3NHcrWz2ZmSbE6qyhwdnDzfAmZXGJVH52ocSnrHOQp3jOi7o4b2DVwi/YSXhr2VoqCKmnt856qCBQWQDtB419hxvhMA2NkEBGyQiM9/qB2xXzA76wIe5ZDCtjuik4KLDF04MEmmnqO76ub67nuwNzf/DlN29bY9EvzzkORRH7FNEdustzZaWpsMc01Xypxas2oyIusGhibDqcDgsYyFllRywdA5P9YA4XpyS/w7eSr+U67eFr5K1vtiV8sON0GMeyUURIGBwgV53VUfOCle8N1nakzrZh++vvPr+IrENQe/qJ6ZWKvjG3fSQVqZG0erDSfQ="
+    - GO111MODULE=on
+    - PROJECT=go-infrabin
+
+install: make dep-ci
+cache:
+  directories:
+    - $GOPATH/pkg/mod
+
+jobs:
+  include:
+    - stage: "Compile"
+      name: "Compile Packages and Dependencies"
+      script: make build
+    - stage: "Tests"
+      name: "Unit Tests"
+      script: make test-ci
+      after_success:
+        - bash <(curl -s https://codecov.io/bash)
+    - stage: "Code Quality"
+      name: "Code Quality Analysis"
+      before_script:
+        - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.12.5
+      script: golangci-lint run
+    - stage: "Release"
+      name: "Release Binaries"
+      script: skip
+      deploy:
+        - provider: script
+          skip_cleanup: true
+          script: curl -sL https://git.io/goreleaser | bash
+          on:
+            tags: true
+            condition: $TRAVIS_OS_NAME = linux
