@@ -1,4 +1,4 @@
-package main
+package helpers
 
 import (
 	"os"
@@ -19,14 +19,5 @@ func TestGetEnv(t *testing.T) {
 	if value != defaultValue {
 		t.Errorf("GetEnv returned unexpected value: got %v want %v",
 			value, defaultValue)
-	}
-}
-
-func TestMin(t *testing.T) {
-	var x, y int = 5, 3
-	min := Min(x, y)
-	if min != y {
-		t.Errorf("Min returned unexpected value: got %v want %v",
-			min, y)
 	}
 }

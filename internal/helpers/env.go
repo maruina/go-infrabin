@@ -1,8 +1,6 @@
-package main
+package helpers
 
-import (
-	"os"
-)
+import "os"
 
 // GetEnv retrieves an environment variable with a default value
 // if the environment variable is missing
@@ -11,12 +9,4 @@ func GetEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
-}
-
-// Min returns the smaller of x or y.
-func Min(x, y int) int {
-	if x > y {
-		return y
-	}
-	return x
 }
