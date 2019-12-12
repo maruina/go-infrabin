@@ -1,16 +1,16 @@
 # Build customization
 builds:
   - main: ./cmd/infrabin/main.go
-binary: go-infrabin
-goos:
-  - windows
-  - darwin
-  - linux
-goarch:
-  - amd64
+    binary: go-infrabin
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
 # Archive customization
-archive:
-  format: tar.gz
+archives:
+  - format: tar.gz
 dockers:
   - image_templates:
     - "maruina/go-infrabin:latest"
