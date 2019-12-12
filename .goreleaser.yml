@@ -1,4 +1,3 @@
-# .goreleaser.yml
 # Build customization
 builds:
   - main: ./cmd/infrabin/main.go
@@ -12,3 +11,7 @@ goarch:
 # Archive customization
 archive:
   format: tar.gz
+dockers:
+  - image_templates:
+    - "maruina/go-infrabin:latest"
+    - "maruina/go-infrabin:{{ .Tag }}"

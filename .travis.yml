@@ -1,38 +1,38 @@
 language: go
 go:
-  - "1.12"
-
+- '1.12'
 env:
   global:
-    - secure: "s1Gacbpu60zQZTdDN2Akke3G3ZrqPoaFtnSfZZqFi3sfLDerZ9GqQuukhnU2KXpjA4DDKN91ZK07SXStcUJR3wImwxSmR8wS99JKeI5751VdZnAs0pfk9i33T6QVhwoeGuPPAGV3LsmQoZfrAc1fCUNyqhP84SkqWGHM1qqldQgaHx8HdepE5ro5Cc4MDhV9mOcdOXc0bOE/RNVHQIWClRn6YyiS7/+S0HhEEaVdWtlB0Zx5YxurSntgCHeluIx5ribqHMcpeVWtyNUB279uBZVpgrAg1xZRXOUhfsksA/iyoWNDevd9ozAnUhVs5tFBFSYVNVg99I3tfDpgMJ+qNL5NURh2bEwtt2T+ze5n3NHcrWz2ZmSbE6qyhwdnDzfAmZXGJVH52ocSnrHOQp3jOi7o4b2DVwi/YSXhr2VoqCKmnt856qCBQWQDtB419hxvhMA2NkEBGyQiM9/qB2xXzA76wIe5ZDCtjuik4KLDF04MEmmnqO76ub67nuwNzf/DlN29bY9EvzzkORRH7FNEdustzZaWpsMc01Xypxas2oyIusGhibDqcDgsYyFllRywdA5P9YA4XpyS/w7eSr+U67eFr5K1vtiV8sON0GMeyUURIGBwgV53VUfOCle8N1nakzrZh++vvPr+IrENQe/qJ6ZWKvjG3fSQVqZG0erDSfQ="
-    - GO111MODULE=on
-    - PROJECT=go-infrabin
-
+  - secure: s1Gacbpu60zQZTdDN2Akke3G3ZrqPoaFtnSfZZqFi3sfLDerZ9GqQuukhnU2KXpjA4DDKN91ZK07SXStcUJR3wImwxSmR8wS99JKeI5751VdZnAs0pfk9i33T6QVhwoeGuPPAGV3LsmQoZfrAc1fCUNyqhP84SkqWGHM1qqldQgaHx8HdepE5ro5Cc4MDhV9mOcdOXc0bOE/RNVHQIWClRn6YyiS7/+S0HhEEaVdWtlB0Zx5YxurSntgCHeluIx5ribqHMcpeVWtyNUB279uBZVpgrAg1xZRXOUhfsksA/iyoWNDevd9ozAnUhVs5tFBFSYVNVg99I3tfDpgMJ+qNL5NURh2bEwtt2T+ze5n3NHcrWz2ZmSbE6qyhwdnDzfAmZXGJVH52ocSnrHOQp3jOi7o4b2DVwi/YSXhr2VoqCKmnt856qCBQWQDtB419hxvhMA2NkEBGyQiM9/qB2xXzA76wIe5ZDCtjuik4KLDF04MEmmnqO76ub67nuwNzf/DlN29bY9EvzzkORRH7FNEdustzZaWpsMc01Xypxas2oyIusGhibDqcDgsYyFllRywdA5P9YA4XpyS/w7eSr+U67eFr5K1vtiV8sON0GMeyUURIGBwgV53VUfOCle8N1nakzrZh++vvPr+IrENQe/qJ6ZWKvjG3fSQVqZG0erDSfQ=
+  - GO111MODULE=on
+  - PROJECT=go-infrabin
+  - secure: YvV8NUDwtpFPonIbJFn8JQLsHWWxdfSoiLL8XDDtasD/hAC2Mf+Oo/S2EksKfg1PbZR9rh6s3RZ8iinpoVIv1+v84lYv3XAVDNC9u3WITdpJUqIoyXnAWI0Vme1vSkrmDkU0O4O2d6Jqd4dgj9AEjApxvlOTbg+gZOc2yZVVvnPdEsXbkZa+Z/tYrt2p/T5bFzn22lzad3O8PwkP/9TNNrcl4unPwEn5aGuQ0WoUZ64FFH003qYg8us4PjKhnec//J9FItuHZeJkKCu+SX7rXysNFLejyHQeXjqiblne9vpVFzrcclT8jZgk338RAymypK5UJEm4dX7U7dohyJfc1LPilu6AjQKGqG9GwYfyLgDv+BPMooQBfHfb7fTcYb3v+C17wsfAIRka+06nL2GKzkRCsq+KSDkypd4Twxl8kokbOqTcfI7iuX3CAQP/wPrpEmN2hzEq+Z8OKv+oX0Hy9HdhdaBBiri7aMbtOMFIcy0aBd1oOgnpXVMhpvJpUOmyR6FxJJJB7he4jx+6w2OfmohNNukYq3YnGmIROFtZdFcM4CWr6mBE+cQl8kc7YsTTLo73TVdok141rlMHG1RwiWQvM1/jqRADZMfd8wjwpIA/a2k/jOQcPdqCiplax7+IKXyBQCLsy3Pt0qH4czJWUOKLIwYNRQZz8fnLq37aXao=
+  - secure: sbZGs1cSsAZa5xbWmlPAUX9sSd9MPgvWoDooznwxm/N21510F7zB/RPofFks5qV/l3fyVrJylkACJDpEKNANYjsN7Eu3ZtvKc0GAB5RVUSrJcghrZP5CfHnTy1Mzc2C8ws4WI8DRpmhGM8Hg1uT3iXOON/8Tw2V1UTaniSx/yCrOt9SAHKZm8JA4cuRN7O/B+fZpq6bZbF8ZGpzyPtDlxo02Th27ivZ7IQh/AuJOcoyWYCy39AXyerHlxsBTMDIVKtVXzu/nFopXc0jLJKh0TVMbuT/SiKccZWsEFgEjZ4YvrDj0Rvp7oBnxBfLk6MhRQ641MHX4D+gcya/syJVngzL5vORWgSDGMSLQd+pHOy5LZDNd0IXrSlXRF0opFem2FYwnMUqQ76AMhZQjRRYK7vOTWKm2xQwDL3F1nloXZfcfPyLCyA98razTFtI6ZylL47qhEvXB4RVIv7BHJBR1fhMXJz2ZQFzSgqDIl5bprfzLdlRfcR5bXUmxHJtWfc5LlQrQEo4Q8B+O98mu9FvNh/MVZB6KP64GGSM4x7vc8lUEv4hGOLykd5VE88Fk+MnCXAEOnrct47/vUSMtR58RxVjI6l/qgaL7za31rWpag4AvtgodmpwkTeqYyBT1GiGpsVEzcFKGyzbbYKt16cPW7fjkB8DMqnzbi7tZ78LtAzk=
 install: make dep-ci
 cache:
   directories:
-    - $GOPATH/pkg/mod
-
+  - "$GOPATH/pkg/mod"
 jobs:
   include:
-    - stage: "Compile"
-      name: "Compile Packages and Dependencies"
-      script: make build
-    - stage: "Tests"
-      name: "Unit Tests"
-      script: make test-ci
-    - stage: "Code Quality"
-      name: "Code Quality Analysis"
-      before_script:
-        - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.12.5
-      script: golangci-lint run
-    - stage: "Release"
-      name: "Release Binaries"
-      script: skip
-      deploy:
-        - provider: script
-          skip_cleanup: true
-          script: curl -sL https://git.io/goreleaser | bash
-          on:
-            tags: true
-            condition: $TRAVIS_OS_NAME = linux
+  - stage: Compile
+    name: Compile Packages and Dependencies
+    script: make build
+  - stage: Tests
+    name: Unit Tests
+    script: make test-ci
+  - stage: Code Quality
+    name: Code Quality Analysis
+    before_script:
+    - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh
+      | bash -s -- -b $GOPATH/bin v1.12.5
+    script: golangci-lint run
+  - stage: Release
+    name: Release Binaries
+    script: docker login -u $DOCKER_USER -p $DOCKER_TOKEN
+    deploy:
+    - provider: script
+      skip_cleanup: true
+      script: curl -sL https://git.io/goreleaser | bash
+      on:
+        tags: true
+        condition: "$TRAVIS_OS_NAME = linux"
