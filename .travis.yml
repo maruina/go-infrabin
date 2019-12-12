@@ -1,6 +1,6 @@
 language: go
 go:
-  - 1.12.x
+  - "1.12"
 
 env:
   global:
@@ -21,8 +21,6 @@ jobs:
     - stage: "Tests"
       name: "Unit Tests"
       script: make test-ci
-      after_success:
-        - bash <(curl -s https://codecov.io/bash)
     - stage: "Code Quality"
       name: "Code Quality Analysis"
       before_script:
