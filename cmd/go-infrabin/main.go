@@ -22,14 +22,20 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	resp := fmt.Sprintf(`{"status": "running", "hostname": "%s"}`, name)
-	io.WriteString(w, resp)
+	_, err = io.WriteString(w, resp)
+	if err != nil {
+		log.Fatal("error writing to ResponseWriter", err)
+	}
 }
 
 // LivenessHandler handles the "/healthcheck/liveness" endpoint
 func LivenessHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, `{"status": "liveness probe healthy"}`)
+	_, err := io.WriteString(w, `{"status": "liveness probe healthy"}`)
+	if err != nil {
+		log.Fatal("error writing to ResponseWriter", err)
+	}
 }
 
 // DelayHandler handles the "/delay" endpoint
@@ -48,7 +54,10 @@ func DelayHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	resp := fmt.Sprintf(`{"status": "completed", "delay": "%d"}`, seconds)
-	io.WriteString(w, resp)
+	_, err = io.WriteString(w, resp)
+	if err != nil {
+		log.Fatal("error writing to ResponseWriter", err)
+	}
 }
 
 func main() {
