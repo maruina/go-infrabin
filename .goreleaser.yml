@@ -15,3 +15,6 @@ dockers:
   - image_templates:
     - "maruina/go-infrabin:latest"
     - "maruina/go-infrabin:{{ .Tag }}"
+    dockerfile: Dockerfile.goreleaser
+    binaries:
+      - go-infrabin
