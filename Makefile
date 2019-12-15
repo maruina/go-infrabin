@@ -19,5 +19,11 @@ dep-ci: dep
 	go get golang.org/x/tools/cmd/cover
 	go get github.com/mattn/goveralls
 
+# Clean go.mod
+go-mod-tidy:
+	@go mod tidy -v
+	@git diff HEAD
+	@git diff-index --quiet HEAD
+
 clean:
 	rm -f $(BINARY_NAME)
