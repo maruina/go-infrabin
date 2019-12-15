@@ -1,6 +1,6 @@
 # Build customization
 builds:
-  - main: ./cmd/infrabin/main.go
+  - main: ./cmd/go-infrabin/main.go
     binary: go-infrabin
     goos:
       - windows
