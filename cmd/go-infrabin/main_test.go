@@ -28,7 +28,12 @@ func TestRootHandler(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := fmt.Sprintf(`{"status": "running", "hostname": "%s"}`, name)
+	expected := fmt.Sprintf(`{"hostname": "%s"}, {"kubernetes":{
+		"pod": "null",
+		"namespace": "null",
+		"ip": "null",
+		"node": "null"
+	}}`, name)
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)

@@ -15,13 +15,31 @@ import (
 
 // RootHandler handles the "/" endpoint
 func RootHandler(w http.ResponseWriter, r *http.Request) {
-	name, err := os.Hostname()
+	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatalf("cannot get hostname: %v", err)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	resp := fmt.Sprintf(`{"status": "running", "hostname": "%s"}`, name)
+
+	podName := helpers.GetEnv("POD_NAME", "null")
+	namespace := helpers.GetEnv("POD_NAMESPACE", "null")
+	podIP := helpers.GetEnv("POD_ID", "null")
+	nodeName := helpers.GetEnv("NODE_NAME", "null")
+
+	jsonData := `
+	{"hostname": "%s"},
+	{"kubernetes": {
+		"pod": "%s",
+		"namespace": "%s",
+		"ip": "%s",
+		"node": "%s"
+	}}
+	`
+
+	resp := fmt.Sprintf(`
+
+	`, hostname, podName, namespace, podIP, nodeName)
 	_, err = io.WriteString(w, resp)
 	if err != nil {
 		log.Fatal("error writing to ResponseWriter", err)
