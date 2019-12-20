@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -13,18 +14,45 @@ import (
 	helpers "github.com/maruina/go-infrabin/internal/helpers"
 )
 
+// Response creates the go-infrabin main response
+type Response struct {
+	Hostname     string        `json:"hostname"`
+	KubeResponse *KubeResponse `json:"kubernetes"`
+}
+
+// KubeResponse creates the response if running on Kubernetes
+type KubeResponse struct {
+	PodName   string `json:"pod_name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	PodIP     string `json:"pod_ip,omitempty"`
+	NodeName  string `json:"node_name,omitempty"`
+}
+
 // RootHandler handles the "/" endpoint
 func RootHandler(w http.ResponseWriter, r *http.Request) {
-	name, err := os.Hostname()
+	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatalf("cannot get hostname: %v", err)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	resp := fmt.Sprintf(`{"status": "running", "hostname": "%s"}`, name)
-	_, err = io.WriteString(w, resp)
+
+	var resp Response
+	resp.Hostname = hostname
+	resp.KubeResponse = &KubeResponse{
+		PodName:   helpers.GetEnv("POD_NAME", ""),
+		Namespace: helpers.GetEnv("POD_NAMESPACE", ""),
+		PodIP:     helpers.GetEnv("POD_IP", ""),
+		NodeName:  helpers.GetEnv("NODE_NAME", ""),
+	}
+
+	jsonResp, err := json.Marshal(resp)
 	if err != nil {
-		log.Fatal("error writing to ResponseWriter", err)
+		log.Fatal("error marshal object: ", err)
+	}
+	_, err = io.WriteString(w, string(jsonResp))
+	if err != nil {
+		log.Fatal("error writing to ResponseWriter: ", err)
 	}
 }
 
