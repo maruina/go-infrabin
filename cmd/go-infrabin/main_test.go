@@ -1,13 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/gorilla/mux"
+	helpers "github.com/maruina/go-infrabin/internal/helpers"
 )
 
 func TestRootHandler(t *testing.T) {
@@ -24,19 +25,74 @@ func TestRootHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
-	name, err := os.Hostname()
+	hostname, err := os.Hostname()
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := fmt.Sprintf(`{"hostname": "%s"}, {"kubernetes":{
-		"pod": "null",
-		"namespace": "null",
-		"ip": "null",
-		"node": "null"
-	}}`, name)
-	if rr.Body.String() != expected {
+	var expected Response
+	expected.Hostname = hostname
+	expected.KubeResponse = &KubeResponse{
+		PodName:   helpers.GetEnv("POD_NAME", ""),
+		Namespace: helpers.GetEnv("POD_NAMESPACE", ""),
+		PodIP:     helpers.GetEnv("POD_ID", ""),
+		NodeName:  helpers.GetEnv("NODE_NAME", ""),
+	}
+	jsonExpected, err := json.Marshal(expected)
+	if err != nil {
+		t.Errorf("cannot marshal object: %v", err)
+	}
+
+	if rr.Body.String() != string(jsonExpected) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+			rr.Body.String(), string(jsonExpected))
+	}
+}
+
+func TestRootHandlerKubernetes(t *testing.T) {
+	// Set Kubernetes OS env variables
+	podName := "go-infrabin-hjv8k"
+	namespace := "kube-system"
+	podIP := "172.16.45.234"
+	nodeName := "ip-10-51-103-11.eu-west-1.compute.internal"
+	os.Setenv("POD_NAME", podName)
+	os.Setenv("POD_NAMESPACE", namespace)
+	os.Setenv("POD_IP", podIP)
+	os.Setenv("NODE_NAME", nodeName)
+
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(RootHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var expected Response
+	expected.Hostname = hostname
+	expected.KubeResponse = &KubeResponse{
+		PodName:   podName,
+		Namespace: namespace,
+		PodIP:     podIP,
+		NodeName:  nodeName,
+	}
+	jsonExpected, err := json.Marshal(expected)
+	if err != nil {
+		t.Errorf("cannot marshal object: %v", err)
+	}
+
+	if rr.Body.String() != string(jsonExpected) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), string(jsonExpected))
 	}
 }
 

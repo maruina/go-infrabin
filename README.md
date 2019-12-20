@@ -19,8 +19,13 @@ To override the default values:
 
     ```json
     {
-        "status": "running",
         "hostname": <hostname>
+        "kubernetes": {
+            "pod_name": <pod_name>,
+            "namespace": <namespace>,
+            "pod_ip": <pod_ip>,
+            "node_name": <node_name>
+        }
     }
     ```
 
