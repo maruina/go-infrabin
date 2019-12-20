@@ -19,12 +19,12 @@ To override the default values:
 
     ```json
     {
-        "hostname": <hostname>
+        "hostname": "<hostname>",
         "kubernetes": {
-            "pod_name": <pod_name>,
-            "namespace": <namespace>,
-            "pod_ip": <pod_ip>,
-            "node_name": <node_name>
+            "pod_name": "<pod_name>",
+            "namespace": "<namespace>",
+            "pod_ip": "<pod_ip>",
+            "node_name": "<node_name>"
         }
     }
     ```
@@ -35,7 +35,7 @@ To override the default values:
     ```json
     {
         "status": "completed",
-        "delay": <seconds>
+        "delay": "<seconds>"
     }
     ```
 
@@ -44,6 +44,6 @@ To override the default values:
 
     ```json
     {
-        "status": "liveness probe healthy"
+        "liveness": "pass"
     }
     ```
