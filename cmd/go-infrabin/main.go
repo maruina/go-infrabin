@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -67,10 +66,13 @@ func DelayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	time.Sleep(time.Duration(helpers.Min(seconds, maxDelay)) * time.Second)
 
+	var resp helpers.Response
+	resp.Delay = strconv.Itoa(seconds)
+	data := helpers.MarshalStructToString(resp)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	resp := fmt.Sprintf(`{"status": "completed", "delay": "%d"}`, seconds)
-	_, err = io.WriteString(w, resp)
+	_, err = io.WriteString(w, data)
 	if err != nil {
 		log.Fatal("error writing to ResponseWriter", err)
 	}

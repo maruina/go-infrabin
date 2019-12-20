@@ -10,6 +10,7 @@ type Response struct {
 	Hostname      string         `json:"hostname,omitempty"`
 	KubeResponse  *KubeResponse  `json:"kubernetes,omitempty"`
 	ProbeResponse *ProbeResponse `json:"probes,omitempty"`
+	Delay         string         `json:"delay,omitempty"`
 }
 
 // KubeResponse creates the response if running on Kubernetes

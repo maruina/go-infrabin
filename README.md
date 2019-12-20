@@ -34,7 +34,6 @@ To override the default values:
 
     ```json
     {
-        "status": "completed",
         "delay": "<seconds>"
     }
     ```
