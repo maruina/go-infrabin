@@ -8,11 +8,16 @@
 
 ## Usage
 
+`go-infrabin` exposes two ports:
+
+* `8888` as a service port
+* `8899` as the admin port, for livensss and readiness probes
+
 To override the default values:
 
 * _INFRABIN_MAX_DELAY_ to change the maximum value for the `/delay` endpoint. Default to 120.
 
-## Endpoints
+## Service Endpoints
 
 * `GET /`
   * _returns_: a JSON response
@@ -38,7 +43,9 @@ To override the default values:
     }
     ```
 
-* `GET /healthcheck/liveness`
+## Admin Endpoints
+
+* `GET /liveness`
   * _returns_: a JSON response if healthy or the status code `503` if unhealthy.
 
     ```json

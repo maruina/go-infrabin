@@ -94,13 +94,14 @@ func DelayHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	r := mux.NewRouter()
 	a := mux.NewRouter()
+	finish := make(chan bool)
 
 	r.HandleFunc("/", RootHandler)
 	r.HandleFunc("/delay/{seconds}", DelayHandler)
 
 	a.HandleFunc("/liveness", LivenessHandler)
 
-	reqSrv := &http.Server{
+	serviceSrv := &http.Server{
 		Handler: r,
 		Addr:    "0.0.0.0:8888",
 		// Good practice: enforce timeouts
@@ -109,13 +110,22 @@ func main() {
 	}
 	adminSrv := &http.Server{
 		Handler: a,
-		Addr:    "0.0.0.0:8889",
+		Addr:    "0.0.0.0:8899",
 		// Good practice: enforce timeouts
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+
 	log.Print("starting go-infrabin")
-	go log.Fatal(reqSrv.ListenAndServe())
-	go log.Fatal(adminSrv.ListenAndServe())
-	select {} // block forever
+
+	go func() {
+		log.Print("Listening on service port...")
+		log.Fatal(serviceSrv.ListenAndServe())
+	}()
+
+	go func() {
+		log.Print("Listening on admin port...")
+		log.Fatal(adminSrv.ListenAndServe())
+	}()
+	<-finish
 }
