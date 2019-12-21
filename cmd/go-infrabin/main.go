@@ -37,15 +37,12 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// LivenessHandler handles the "/healthcheck/liveness" endpoint
+// LivenessHandler handles the "/liveness" endpoint
 func LivenessHandler(w http.ResponseWriter, r *http.Request) {
 	var resp helpers.Response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	resp.ProbeResponse = &helpers.ProbeResponse{
-		Liveness: "pass",
-	}
-
+	resp.Liveness = "pass"
 	data := helpers.MarshalResponseToString(resp)
 	_, err := io.WriteString(w, data)
 	if err != nil {
@@ -56,6 +53,7 @@ func LivenessHandler(w http.ResponseWriter, r *http.Request) {
 // DelayHandler handles the "/delay" endpoint
 func DelayHandler(w http.ResponseWriter, r *http.Request) {
 	var resp helpers.Response
+	var seconds int
 	vars := mux.Vars(r)
 	w.Header().Set("Content-Type", "application/json")
 
@@ -68,7 +66,6 @@ func DelayHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatal("error writing to ResponseWriter", err)
 		}
-		log.Printf("cannot convert vars['seconds'] to integer: %v", err)
 	} else {
 		maxDelay, err := strconv.Atoi(helpers.GetEnv("INFRABIN_MAX_DELAY", "120"))
 		if err != nil {
@@ -89,18 +86,39 @@ func DelayHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := mux.NewRouter()
+	a := mux.NewRouter()
+	finish := make(chan bool)
 
 	r.HandleFunc("/", RootHandler)
 	r.HandleFunc("/delay/{seconds}", DelayHandler)
-	r.HandleFunc("/healthcheck/liveness", LivenessHandler)
 
-	srv := &http.Server{
+	a.HandleFunc("/liveness", LivenessHandler)
+
+	serviceSrv := &http.Server{
 		Handler: r,
-		Addr:    "0.0.0.0:8080",
+		Addr:    "0.0.0.0:8888",
 		// Good practice: enforce timeouts
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+	adminSrv := &http.Server{
+		Handler: a,
+		Addr:    "0.0.0.0:8899",
+		// Good practice: enforce timeouts
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
 	log.Print("starting go-infrabin")
-	log.Fatal(srv.ListenAndServe())
+
+	go func() {
+		log.Print("Listening on service port...")
+		log.Fatal(serviceSrv.ListenAndServe())
+	}()
+
+	go func() {
+		log.Print("Listening on admin port...")
+		log.Fatal(adminSrv.ListenAndServe())
+	}()
+	<-finish
 }
