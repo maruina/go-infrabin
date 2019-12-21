@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -14,20 +12,6 @@ import (
 	helpers "github.com/maruina/go-infrabin/internal/helpers"
 )
 
-// Response creates the go-infrabin main response
-type Response struct {
-	Hostname     string        `json:"hostname"`
-	KubeResponse *KubeResponse `json:"kubernetes"`
-}
-
-// KubeResponse creates the response if running on Kubernetes
-type KubeResponse struct {
-	PodName   string `json:"pod_name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	PodIP     string `json:"pod_ip,omitempty"`
-	NodeName  string `json:"node_name,omitempty"`
-}
-
 // RootHandler handles the "/" endpoint
 func RootHandler(w http.ResponseWriter, r *http.Request) {
 	hostname, err := os.Hostname()
@@ -37,20 +21,17 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	var resp Response
+	var resp helpers.Response
 	resp.Hostname = hostname
-	resp.KubeResponse = &KubeResponse{
+	resp.KubeResponse = &helpers.KubeResponse{
 		PodName:   helpers.GetEnv("POD_NAME", ""),
 		Namespace: helpers.GetEnv("POD_NAMESPACE", ""),
 		PodIP:     helpers.GetEnv("POD_IP", ""),
 		NodeName:  helpers.GetEnv("NODE_NAME", ""),
 	}
 
-	jsonResp, err := json.Marshal(resp)
-	if err != nil {
-		log.Fatal("error marshal object: ", err)
-	}
-	_, err = io.WriteString(w, string(jsonResp))
+	data := helpers.MarshalResponseToString(resp)
+	_, err = io.WriteString(w, data)
 	if err != nil {
 		log.Fatal("error writing to ResponseWriter: ", err)
 	}
@@ -58,9 +39,15 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 
 // LivenessHandler handles the "/healthcheck/liveness" endpoint
 func LivenessHandler(w http.ResponseWriter, r *http.Request) {
+	var resp helpers.Response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, err := io.WriteString(w, `{"status": "liveness probe healthy"}`)
+	resp.ProbeResponse = &helpers.ProbeResponse{
+		Liveness: "pass",
+	}
+
+	data := helpers.MarshalResponseToString(resp)
+	_, err := io.WriteString(w, data)
 	if err != nil {
 		log.Fatal("error writing to ResponseWriter", err)
 	}
@@ -68,23 +55,35 @@ func LivenessHandler(w http.ResponseWriter, r *http.Request) {
 
 // DelayHandler handles the "/delay" endpoint
 func DelayHandler(w http.ResponseWriter, r *http.Request) {
+	var resp helpers.Response
 	vars := mux.Vars(r)
+	w.Header().Set("Content-Type", "application/json")
+
 	seconds, err := strconv.Atoi(vars["seconds"])
 	if err != nil {
-		log.Fatalf("cannot convert vars['seconds'] to integer: %v", err)
-	}
-	maxDelay, err := strconv.Atoi(helpers.GetEnv("INFRABIN_MAX_DELAY", "120"))
-	if err != nil {
-		log.Fatalf("cannot convert env var INFRABIN_MAX_DELAY to integer: %v", err)
-	}
-	time.Sleep(time.Duration(helpers.Min(seconds, maxDelay)) * time.Second)
+		resp.Error = "cannot convert seconds to integer"
+		data := helpers.MarshalResponseToString(resp)
+		w.WriteHeader(http.StatusBadRequest)
+		_, err = io.WriteString(w, data)
+		if err != nil {
+			log.Fatal("error writing to ResponseWriter", err)
+		}
+		log.Printf("cannot convert vars['seconds'] to integer: %v", err)
+	} else {
+		maxDelay, err := strconv.Atoi(helpers.GetEnv("INFRABIN_MAX_DELAY", "120"))
+		if err != nil {
+			log.Fatalf("cannot convert env var INFRABIN_MAX_DELAY to integer: %v", err)
+		}
+		time.Sleep(time.Duration(helpers.Min(seconds, maxDelay)) * time.Second)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	resp := fmt.Sprintf(`{"status": "completed", "delay": "%d"}`, seconds)
-	_, err = io.WriteString(w, resp)
-	if err != nil {
-		log.Fatal("error writing to ResponseWriter", err)
+		resp.Delay = strconv.Itoa(seconds)
+		data := helpers.MarshalResponseToString(resp)
+
+		w.WriteHeader(http.StatusOK)
+		_, err = io.WriteString(w, data)
+		if err != nil {
+			log.Fatal("error writing to ResponseWriter", err)
+		}
 	}
 }
 
