@@ -53,19 +53,12 @@ func LivenessHandler(w http.ResponseWriter, r *http.Request) {
 // DelayHandler handles the "/delay" endpoint
 func DelayHandler(w http.ResponseWriter, r *http.Request) {
 	var resp helpers.Response
-	var val string
 	var seconds int
 	vars := mux.Vars(r)
 	w.Header().Set("Content-Type", "application/json")
-	val, ok := vars["seconds"]
-	if !ok {
-		seconds = 0
-	}
 
-	seconds, err := strconv.Atoi(val)
-
+	seconds, err := strconv.Atoi(vars["seconds"])
 	if err != nil {
-		log.Printf("cannot convert vars['seconds'] to integer: %v", err)
 		resp.Error = "cannot convert seconds to integer"
 		data := helpers.MarshalResponseToString(resp)
 		w.WriteHeader(http.StatusBadRequest)
