@@ -105,9 +105,7 @@ func TestLivenessHandler(t *testing.T) {
 	}
 
 	var expected helpers.Response
-	expected.ProbeResponse = &helpers.ProbeResponse{
-		Liveness: "pass",
-	}
+	expected.Liveness = "pass"
 	data := helpers.MarshalResponseToString(expected)
 
 	if rr.Body.String() != data {
