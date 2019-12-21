@@ -46,3 +46,14 @@ To override the default values:
         "liveness": "pass"
     }
     ```
+
+## Errors
+
+* `400`
+  * _returns_:
+
+  ```json
+    {
+        "error": "<reason>"
+    }
+  ```
