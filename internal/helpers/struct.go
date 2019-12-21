@@ -28,7 +28,7 @@ type ProbeResponse struct {
 	Readiness string `json:"readiness,omitempty"`
 }
 
-// MarshalResponseToString marhal a struct into a json and return the value as string
+// MarshalResponseToString marhal a Response struct into a json and return it as string
 func MarshalResponseToString(r Response) string {
 	data, err := json.Marshal(r)
 	if err != nil {
