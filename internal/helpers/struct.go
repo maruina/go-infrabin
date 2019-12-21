@@ -11,6 +11,7 @@ type Response struct {
 	KubeResponse  *KubeResponse  `json:"kubernetes,omitempty"`
 	ProbeResponse *ProbeResponse `json:"probes,omitempty"`
 	Delay         string         `json:"delay,omitempty"`
+	Error         string         `json:"error,omitempty"`
 }
 
 // KubeResponse creates the response if running on Kubernetes
@@ -27,8 +28,8 @@ type ProbeResponse struct {
 	Readiness string `json:"readiness,omitempty"`
 }
 
-// MarshalStructToString marhal a struct into a json and return the value as string
-func MarshalStructToString(r Response) string {
+// MarshalResponseToString marhal a struct into a json and return the value as string
+func MarshalResponseToString(r Response) string {
 	data, err := json.Marshal(r)
 	if err != nil {
 		log.Fatal("error marshal object: ", err)

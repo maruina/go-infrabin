@@ -30,7 +30,7 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 		NodeName:  helpers.GetEnv("NODE_NAME", ""),
 	}
 
-	data := helpers.MarshalStructToString(resp)
+	data := helpers.MarshalResponseToString(resp)
 	_, err = io.WriteString(w, data)
 	if err != nil {
 		log.Fatal("error writing to ResponseWriter: ", err)
@@ -46,7 +46,7 @@ func LivenessHandler(w http.ResponseWriter, r *http.Request) {
 		Liveness: "pass",
 	}
 
-	data := helpers.MarshalStructToString(resp)
+	data := helpers.MarshalResponseToString(resp)
 	_, err := io.WriteString(w, data)
 	if err != nil {
 		log.Fatal("error writing to ResponseWriter", err)
@@ -55,26 +55,35 @@ func LivenessHandler(w http.ResponseWriter, r *http.Request) {
 
 // DelayHandler handles the "/delay" endpoint
 func DelayHandler(w http.ResponseWriter, r *http.Request) {
+	var resp helpers.Response
 	vars := mux.Vars(r)
+	w.Header().Set("Content-Type", "application/json")
+
 	seconds, err := strconv.Atoi(vars["seconds"])
 	if err != nil {
-		log.Fatalf("cannot convert vars['seconds'] to integer: %v", err)
-	}
-	maxDelay, err := strconv.Atoi(helpers.GetEnv("INFRABIN_MAX_DELAY", "120"))
-	if err != nil {
-		log.Fatalf("cannot convert env var INFRABIN_MAX_DELAY to integer: %v", err)
-	}
-	time.Sleep(time.Duration(helpers.Min(seconds, maxDelay)) * time.Second)
+		resp.Error = "cannot convert seconds to integer"
+		data := helpers.MarshalResponseToString(resp)
+		w.WriteHeader(http.StatusBadRequest)
+		_, err = io.WriteString(w, data)
+		if err != nil {
+			log.Fatal("error writing to ResponseWriter", err)
+		}
+		log.Printf("cannot convert vars['seconds'] to integer: %v", err)
+	} else {
+		maxDelay, err := strconv.Atoi(helpers.GetEnv("INFRABIN_MAX_DELAY", "120"))
+		if err != nil {
+			log.Fatalf("cannot convert env var INFRABIN_MAX_DELAY to integer: %v", err)
+		}
+		time.Sleep(time.Duration(helpers.Min(seconds, maxDelay)) * time.Second)
 
-	var resp helpers.Response
-	resp.Delay = strconv.Itoa(seconds)
-	data := helpers.MarshalStructToString(resp)
+		resp.Delay = strconv.Itoa(seconds)
+		data := helpers.MarshalResponseToString(resp)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err = io.WriteString(w, data)
-	if err != nil {
-		log.Fatal("error writing to ResponseWriter", err)
+		w.WriteHeader(http.StatusOK)
+		_, err = io.WriteString(w, data)
+		if err != nil {
+			log.Fatal("error writing to ResponseWriter", err)
+		}
 	}
 }
 

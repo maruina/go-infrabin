@@ -36,7 +36,7 @@ func TestRootHandler(t *testing.T) {
 		PodIP:     helpers.GetEnv("POD_ID", ""),
 		NodeName:  helpers.GetEnv("NODE_NAME", ""),
 	}
-	data := helpers.MarshalStructToString(expected)
+	data := helpers.MarshalResponseToString(expected)
 
 	if rr.Body.String() != data {
 		t.Errorf("handler returned unexpected body: got %v want %v",
@@ -81,7 +81,7 @@ func TestRootHandlerKubernetes(t *testing.T) {
 		PodIP:     podIP,
 		NodeName:  nodeName,
 	}
-	data := helpers.MarshalStructToString(expected)
+	data := helpers.MarshalResponseToString(expected)
 
 	if rr.Body.String() != data {
 		t.Errorf("handler returned unexpected body: got %v want %v",
@@ -108,7 +108,7 @@ func TestLivenessHandler(t *testing.T) {
 	expected.ProbeResponse = &helpers.ProbeResponse{
 		Liveness: "pass",
 	}
-	data := helpers.MarshalStructToString(expected)
+	data := helpers.MarshalResponseToString(expected)
 
 	if rr.Body.String() != data {
 		t.Errorf("handler returned unexpected body: got %v want %v",
@@ -133,7 +133,32 @@ func TestDelayHandler(t *testing.T) {
 
 	var expected helpers.Response
 	expected.Delay = "1"
-	data := helpers.MarshalStructToString(expected)
+	data := helpers.MarshalResponseToString(expected)
+
+	if rr.Body.String() != data {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), data)
+	}
+}
+
+func TestDelayHandlerBadRequest(t *testing.T) {
+	req, err := http.NewRequest("GET", "/delay", nil)
+	req = mux.SetURLVars(req, map[string]string{"seconds": "abc"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(DelayHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+
+	var expected helpers.Response
+	expected.Error = "cannot convert seconds to integer"
+	data := helpers.MarshalResponseToString(expected)
 
 	if rr.Body.String() != data {
 		t.Errorf("handler returned unexpected body: got %v want %v",
