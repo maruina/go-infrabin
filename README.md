@@ -11,7 +11,7 @@
 `go-infrabin` exposes two ports:
 
 * `8888` as a service port
-* `8899` as the admin port, for livensss and readiness probes
+* `8899` as the admin port, for liveness and readiness probes
 
 To override the default values:
 
