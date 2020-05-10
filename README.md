@@ -1,10 +1,11 @@
 # go-infrabin
 
-[![Build Status](https://travis-ci.org/maruina/go-infrabin.svg?branch=master)](https://travis-ci.org/maruina/go-infrabin)
 [![Go Report Card](https://goreportcard.com/badge/github.com/maruina/go-infrabin)](https://goreportcard.com/report/github.com/maruina/go-infrabin)
 [![Coverage Status](https://coveralls.io/repos/github/maruina/go-infrabin/badge.svg?branch=master)](https://coveralls.io/github/maruina/go-infrabin?branch=master)
 
 [infrabin](https://github.com/maruina/infrabin) written in go.
+
+**Warning: `go-infrabin` exposes sensitive endpoints and should NEVER be used on the public Internet.**
 
 ## Usage
 
@@ -49,6 +50,17 @@ To override the default values:
     ```json
     {
         "headers": "<request headers>"
+    }
+    ```
+
+* `GET /env/<env_var>`
+  * _returns_: a JSON response with the requested `<env_var>` or `404` if the environment variable does not exist
+
+    ```json
+    {
+        "env": {
+            "<env_var>": "<env_var_value>"
+        }
     }
     ```
 
