@@ -13,10 +13,3 @@ builds:
 # Archive customization
 archives:
   - format: tar.gz
-dockers:
-  - image_templates:
-    - "maruina/go-infrabin:latest"
-    - "maruina/go-infrabin:{{ .Tag }}"
-    dockerfile: Dockerfile.goreleaser
-    binaries:
-      - go-infrabin
