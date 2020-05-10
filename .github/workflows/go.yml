@@ -31,9 +31,16 @@ jobs:
       run: go build -v cmd/go-infrabin/main.go
 
     - name: Test
-      run: go test -v -race ./...
+      run: go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
+
+    - name: Convert coverage to lcov
+      uses: jandelgado/gcov2lcov-action@v1.0.2
+      with:
+          infile: coverage.out
+          outfile: coverage.lcov
 
     - name: Coveralls GitHub Action
       uses: coverallsapp/github-action@v1.1.1
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: coverage.lcov
