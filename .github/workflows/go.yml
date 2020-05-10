@@ -27,6 +27,11 @@ jobs:
             dep ensure
         fi
 
+    - name: Run golangci-lint
+      uses: actions-contrib/golangci-lint@v1
+      with:
+        args: --enable-all
+
     - name: Build
       run: go build -v cmd/go-infrabin/main.go
 
