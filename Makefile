@@ -12,6 +12,9 @@ test-ci:
 build:
 	go build -o $(BINARY_NAME) cmd/$(BINARY_NAME)/main.go
 
+run: build
+	./$(BINARY_NAME)
+
 dep:
 	go get ./...
 
