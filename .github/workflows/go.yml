@@ -29,7 +29,7 @@ jobs:
         fi
 
     - name: Build
-      run: go build -v .
+      run: go build -v cmd/go-infrabin/main.go
 
     - name: Test
       run: go test -v -race ./...
