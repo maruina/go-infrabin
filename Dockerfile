@@ -1,6 +1,6 @@
-FROM golang:1.13.5-buster as builder
+FROM golang:1.14.2-buster as builder
 WORKDIR /go/src/go-infrabin
-ADD . /go/src/go-infrabin
+COPY . /go/src/go-infrabin
 RUN make build
 
 FROM gcr.io/distroless/base-debian10
