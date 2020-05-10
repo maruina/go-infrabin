@@ -191,3 +191,51 @@ func TestHeadersHandler(t *testing.T) {
 			rr.Body.String(), data)
 	}
 }
+
+func TestEnvHandler(t *testing.T) {
+	if err := os.Setenv("TEST_ENV", "foo"); err != nil {
+		t.Errorf("cannot set environment variable")
+	}
+	req, err := http.NewRequest("GET", "/env", nil)
+	req = mux.SetURLVars(req, map[string]string{"env_var": "TEST_ENV"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(EnvHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	var expected helpers.Response
+	expected.Env = map[string]string{
+		"TEST_ENV": "foo",
+	}
+	data := helpers.MarshalResponseToString(expected)
+
+	if rr.Body.String() != data {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), data)
+	}
+}
+
+func TestEnvHandlerNotFound(t *testing.T) {
+	req, err := http.NewRequest("GET", "/env", nil)
+	req = mux.SetURLVars(req, map[string]string{"env_var": "NOT_FOUND"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(EnvHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusNotFound)
+	}
+}
