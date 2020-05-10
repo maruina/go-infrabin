@@ -84,6 +84,19 @@ func DelayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HeadersHandler handles the headers endpoint
+func HeadersHandler(w http.ResponseWriter, r *http.Request) {
+	var resp helpers.Response
+	w.Header().Set("Content-Type", "application/json")
+	resp.Headers = &r.Header
+
+	data := helpers.MarshalResponseToString(resp)
+	_, err := io.WriteString(w, data)
+	if err != nil {
+		log.Fatal("error writing to ResponseWriter: ", err)
+	}
+}
+
 func main() {
 	r := mux.NewRouter()
 	a := mux.NewRouter()
@@ -91,6 +104,7 @@ func main() {
 
 	r.HandleFunc("/", RootHandler)
 	r.HandleFunc("/delay/{seconds}", DelayHandler)
+	r.HandleFunc("/headers", HeadersHandler)
 
 	a.HandleFunc("/liveness", LivenessHandler)
 
@@ -112,12 +126,12 @@ func main() {
 	log.Print("starting go-infrabin")
 
 	go func() {
-		log.Print("Listening on service port...")
+		log.Print("Listening on service port 8888...")
 		log.Fatal(serviceSrv.ListenAndServe())
 	}()
 
 	go func() {
-		log.Print("Listening on admin port...")
+		log.Print("Listening on admin port 8899...")
 		log.Fatal(adminSrv.ListenAndServe())
 	}()
 	<-finish
