@@ -43,6 +43,15 @@ To override the default values:
     }
     ```
 
+* `GET /headers`
+  * _returns_: a JSON response with [HTTP headers](https://pkg.go.dev/net/http?tab=doc#Header)
+
+    ```json
+    {
+        "headers": "<request headers>"
+    }
+    ```
+
 ## Admin Endpoints
 
 * `GET /liveness`
