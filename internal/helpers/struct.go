@@ -8,12 +8,13 @@ import (
 
 // Response creates the go-infrabin main response
 type Response struct {
-	Hostname     string        `json:"hostname,omitempty"`
-	KubeResponse *KubeResponse `json:"kubernetes,omitempty"`
-	Liveness     string        `json:"liveness,omitempty"`
-	Delay        string        `json:"delay,omitempty"`
-	Error        string        `json:"error,omitempty"`
-	Headers      *http.Header  `json:"headers,omitempty"`
+	Hostname     string            `json:"hostname,omitempty"`
+	KubeResponse *KubeResponse     `json:"kubernetes,omitempty"`
+	Liveness     string            `json:"liveness,omitempty"`
+	Delay        string            `json:"delay,omitempty"`
+	Error        string            `json:"error,omitempty"`
+	Headers      *http.Header      `json:"headers,omitempty"`
+	Env          map[string]string `json:"env,omitempty"`
 }
 
 // KubeResponse creates the response if running on Kubernetes

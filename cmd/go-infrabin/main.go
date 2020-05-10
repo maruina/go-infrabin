@@ -97,6 +97,36 @@ func HeadersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// EnvHandler handles the env endpoint
+func EnvHandler(w http.ResponseWriter, r *http.Request) {
+	var resp helpers.Response
+	vars := mux.Vars(r)
+	w.Header().Set("Content-Type", "application/json")
+	value := helpers.GetEnv(vars["env_var"], "")
+
+	if value == "" {
+		data := helpers.MarshalResponseToString(resp)
+		w.WriteHeader(http.StatusNotFound)
+		_, err := io.WriteString(w, data)
+		if err != nil {
+			log.Fatal("error writing to ResponseWriter", err)
+		}
+	} else {
+
+		resp.Env = map[string]string{
+			vars["env_var"]: value,
+		}
+		data := helpers.MarshalResponseToString(resp)
+
+		w.WriteHeader(http.StatusOK)
+		_, err := io.WriteString(w, data)
+		if err != nil {
+			log.Fatal("error writing to ResponseWriter", err)
+		}
+
+	}
+}
+
 func main() {
 	r := mux.NewRouter()
 	a := mux.NewRouter()
@@ -105,6 +135,7 @@ func main() {
 	r.HandleFunc("/", RootHandler)
 	r.HandleFunc("/delay/{seconds}", DelayHandler)
 	r.HandleFunc("/headers", HeadersHandler)
+	r.HandleFunc("/env/{env_var}", EnvHandler)
 
 	a.HandleFunc("/liveness", LivenessHandler)
 
