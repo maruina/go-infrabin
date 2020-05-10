@@ -2,7 +2,10 @@ BINARY_NAME=go-infrabin
 
 all: dep test
 
-test:
+lint:
+	golangci-lint run
+
+test: lint
 	go test -v -race ./...
 
 test-ci:
