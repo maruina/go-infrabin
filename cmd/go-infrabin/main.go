@@ -1,11 +1,14 @@
 package main
 
 import (
+	"github.com/maruina/go-infrabin/internal/dns"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -130,7 +133,10 @@ func EnvHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	r := mux.NewRouter()
 	a := mux.NewRouter()
-	finish := make(chan bool)
+
+	// Trap ctrl + c / k8s exit signals so we can shut down more gracefully
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
 	r.HandleFunc("/", RootHandler)
 	r.HandleFunc("/delay/{seconds}", DelayHandler)
@@ -154,6 +160,9 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 	}
 
+	// Start the mock DNS Server
+	dnsTermChan, dnsDoneChan := dns.RunDefaultDNSServerWithFinChan(8053)
+
 	log.Print("starting go-infrabin")
 
 	go func() {
@@ -165,5 +174,13 @@ func main() {
 		log.Print("Listening on admin port 8899...")
 		log.Fatal(adminSrv.ListenAndServe())
 	}()
-	<-finish
+
+	// Block and wait for exit signal (ctrl +c / k8s signals
+	for range signals {
+		// Terminate DNS Servers
+		dnsTermChan <- struct{}{}
+		<-dnsDoneChan
+		log.Fatal("Terminated")
+
+	}
 }
