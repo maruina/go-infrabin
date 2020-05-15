@@ -15,7 +15,6 @@ func init() {
 	miekg.HandleFunc("cname.infrabin.com", CNAMERecordResponse)
 }
 
-
 // Runs a TCP and UDP DNS Server on port {port}
 func RunDefaultDNSServerWithFinChan(port int) (chan struct{}, chan struct{}) {
 	// our term channel
