@@ -6,7 +6,6 @@ import (
 	miekg "github.com/miekg/dns"
 )
 
-// typeA writer returns a static A record resolving names to localhost
 func ARecordResponseLoopback(w miekg.ResponseWriter, req *miekg.Msg) {
 	m := new(miekg.Msg)
 	m.SetReply(req)
@@ -25,7 +24,6 @@ func ARecordResponseLoopback(w miekg.ResponseWriter, req *miekg.Msg) {
 	_ = w.WriteMsg(m)
 }
 
-// typeA writer returns a static A record resolving names to localhost
 func AAAARecordResponseLoopback(w miekg.ResponseWriter, req *miekg.Msg) {
 	m := new(miekg.Msg)
 	m.SetReply(req)
@@ -44,7 +42,6 @@ func AAAARecordResponseLoopback(w miekg.ResponseWriter, req *miekg.Msg) {
 	_ = w.WriteMsg(m)
 }
 
-// typeA writer returns a static A record resolving names to localhost
 func CNAMERecordResponse(w miekg.ResponseWriter, req *miekg.Msg) {
 	m := new(miekg.Msg)
 	m.SetReply(req)
