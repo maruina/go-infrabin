@@ -9,10 +9,11 @@
 
 ## Usage
 
-`go-infrabin` exposes two ports:
+`go-infrabin` exposes ports:
 
 * `8888` as a service port
 * `8899` as the admin port, for liveness and readiness probes
+* `8053` TCP/UDP DNS Server port for testing dns clients
 
 To override the default values:
 
@@ -74,6 +75,53 @@ To override the default values:
         "liveness": "pass"
     }
     ```
+
+## DNS Client Examples
+```
+ dig @localhost -p8053 cname.infrabin.com
+
+; <<>> DiG 9.10.6 <<>> @localhost -p8053 cname.infrabin.com
+; (2 servers found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 9832
+;; flags: qr rd; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 0
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;cname.infrabin.com.		IN	A
+
+;; AUTHORITY SECTION:
+cname.infrabin.com.	300	IN	CNAME	infrabin.com.
+
+;; Query time: 0 msec
+;; SERVER: ::1#8053(::1)
+;; WHEN: Fri May 15 16:13:38 BST 2020
+;; MSG SIZE  rcvd: 80
+```
+
+```
+dig @localhost -p8053 aaaarecord.infrabin.com
+
+; <<>> DiG 9.10.6 <<>> @localhost -p8053 aaaarecord.infrabin.com
+; (2 servers found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 13777
+;; flags: qr rd; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;aaaarecord.infrabin.com.	IN	A
+
+;; ANSWER SECTION:
+aaaarecord.infrabin.com. 0	IN	AAAA	::1
+
+;; Query time: 0 msec
+;; SERVER: ::1#8053(::1)
+;; WHEN: Fri May 15 16:14:06 BST 2020
+;; MSG SIZE  rcvd: 92
+```
 
 ## Errors
 
