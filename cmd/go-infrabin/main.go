@@ -14,26 +14,33 @@ import (
 
 // RootHandler handles the "/" endpoint
 func RootHandler(w http.ResponseWriter, r *http.Request) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Fatalf("cannot get hostname: %v", err)
-	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 
-	var resp helpers.Response
-	resp.Hostname = hostname
-	resp.KubeResponse = &helpers.KubeResponse{
-		PodName:   helpers.GetEnv("POD_NAME", ""),
-		Namespace: helpers.GetEnv("POD_NAMESPACE", ""),
-		PodIP:     helpers.GetEnv("POD_IP", ""),
-		NodeName:  helpers.GetEnv("NODE_NAME", ""),
-	}
+	fail := helpers.GetEnv("FAIL_ROOT_HANDLER", "")
+	if fail != "" {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	} else {
+		w.WriteHeader(http.StatusOK)
 
-	data := helpers.MarshalResponseToString(resp)
-	_, err = io.WriteString(w, data)
-	if err != nil {
-		log.Fatal("error writing to ResponseWriter: ", err)
+		hostname, err := os.Hostname()
+		if err != nil {
+			log.Fatalf("cannot get hostname: %v", err)
+		}
+
+		var resp helpers.Response
+		resp.Hostname = hostname
+		resp.KubeResponse = &helpers.KubeResponse{
+			PodName:   helpers.GetEnv("POD_NAME", ""),
+			Namespace: helpers.GetEnv("POD_NAMESPACE", ""),
+			PodIP:     helpers.GetEnv("POD_IP", ""),
+			NodeName:  helpers.GetEnv("NODE_NAME", ""),
+		}
+
+		data := helpers.MarshalResponseToString(resp)
+		_, err = io.WriteString(w, data)
+		if err != nil {
+			log.Fatal("error writing to ResponseWriter: ", err)
+		}
 	}
 }
 

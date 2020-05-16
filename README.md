@@ -18,6 +18,10 @@ To override the default values:
 
 * _INFRABIN_MAX_DELAY_ to change the maximum value for the `/delay` endpoint. Default to 120.
 
+## Environment variables
+
+* `FAIL_ROOT_HANDLER`: if set, the `/` endpoint will return a 503. This is useful when doing a B/G deployment to test the failure and rollback scenario.
+
 ## Service Endpoints
 
 * `GET /`
