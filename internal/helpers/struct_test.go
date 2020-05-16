@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"log"
 	"testing"
 )
@@ -11,7 +10,7 @@ func TestMarshalResponseToString(t *testing.T) {
 	resp.Hostname = "hal"
 
 	data := MarshalResponseToString(resp)
-	expected := fmt.Sprint(`{"hostname":"hal"}`)
+	expected := `{"hostname":"hal"}`
 	if data != expected {
 		log.Fatalf("error: expected %v got %v", expected, data)
 	}

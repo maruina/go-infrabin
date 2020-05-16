@@ -44,6 +44,28 @@ func TestRootHandler(t *testing.T) {
 	}
 }
 
+func TestFailRootHandler(t *testing.T) {
+	if err := os.Setenv("FAIL_ROOT_HANDLER", "true"); err != nil {
+		t.Errorf("cannot set environment variable")
+	}
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(RootHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusServiceUnavailable {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusServiceUnavailable)
+	}
+	if err = os.Unsetenv("FAIL_ROOT_HANDLER"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRootHandlerKubernetes(t *testing.T) {
 	// Set Kubernetes OS env variables
 	podName := "go-infrabin-hjv8k"
