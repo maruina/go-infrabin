@@ -13,3 +13,6 @@
 
 # Built binary
 go-infrabin
+
+# Add chart
+!chart/go-infrabin/

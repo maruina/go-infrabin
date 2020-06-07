@@ -1,0 +1,58 @@
+{{- if .Values.rbac.pspEnabled }}
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: {{ template "go-infrabin.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "go-infrabin.labels" . | nindent 4 }}
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
+spec:
+  privileged: false
+  hostIPC: false
+  hostNetwork: false
+  hostPID: false
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: true
+  allowedCapabilities:
+    - '*'
+  fsGroup:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  volumes:
+    - '*'
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template "go-infrabin.fullname" . }}-psp
+  labels:
+    {{- include "go-infrabin.labels" . | nindent 4 }}
+rules:
+    - apiGroups: ['policy']
+      resources: ['podsecuritypolicies']
+      verbs:     ['use']
+      resourceNames:
+        - {{ template "go-infrabin.fullname" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+    name: {{ template "go-infrabin.fullname" . }}-psp
+    labels:
+      {{- include "go-infrabin.labels" . | nindent 4 }}
+roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: {{ template "go-infrabin.fullname" . }}-psp
+subjects:
+    - kind: ServiceAccount
+      name: {{ template "flux.serviceAccountName" . }}
+      namespace: {{ .Release.Namespace }}
+{{- end }}
