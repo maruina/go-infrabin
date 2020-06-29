@@ -11,7 +11,7 @@ helm repo update
 
 Install the chart with the release name `goinfra`:
 
-1. Create the flux namespace:
+1. Create the `infrabin` namespace:
 
     ```console
     kubectl create namespace infrabin
