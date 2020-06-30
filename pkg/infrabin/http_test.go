@@ -1,4 +1,4 @@
-package main
+package infrabin
 
 import (
 	"net/http"
