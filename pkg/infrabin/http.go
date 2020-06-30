@@ -37,7 +37,7 @@ func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) htt
 			w.WriteHeader(http.StatusBadRequest)
 			response = &Response{Error: fmt.Sprintf("Failed to build request: %v", err)}
 		} else {
-			response, err = grpcHandler(context.Background(), request)
+			response, err = grpcHandler(r.Context(), request)
 			if err != nil {
 				w.WriteHeader(http.StatusServiceUnavailable)
 			} else {
