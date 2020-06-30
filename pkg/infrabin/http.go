@@ -1,43 +1,44 @@
 package infrabin
 
 import (
+	"context"
+	"io"
 	"log"
 	"net/http"
-	"os"
-	"io"
 	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
+
 	"github.com/maruina/go-infrabin/internal/helpers"
 )
 
-// RootHandler handles the "/" endpoint
-func RootHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+type RequestBuilder func(*http.Request) (interface{}, error)
 
-	fail := helpers.GetEnv("FAIL_ROOT_HANDLER", "")
-	if fail != "" {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	} else {
-		w.WriteHeader(http.StatusOK)
+//func(context.Content, interface{}) (interface{}, error)
+func MakeHandler(grpcHandler grpc.UnaryHandler, requestBuilder RequestBuilder) http.HandlerFunc {
 
-		hostname, err := os.Hostname()
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		request, err := requestBuilder(r)
 		if err != nil {
-			log.Fatalf("cannot get hostname: %v", err)
+			log.Fatalf("Failed to build request: %v", err)
 		}
 
-		var resp helpers.Response
-		resp.Hostname = hostname
-		resp.KubeResponse = &helpers.KubeResponse{
-			PodName:   helpers.GetEnv("POD_NAME", ""),
-			Namespace: helpers.GetEnv("POD_NAMESPACE", ""),
-			PodIP:     helpers.GetEnv("POD_IP", ""),
-			NodeName:  helpers.GetEnv("NODE_NAME", ""),
+		resp, err := grpcHandler(context.Background(), request)
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		} else {
+			w.WriteHeader(http.StatusOK)
 		}
 
-		data := helpers.MarshalResponseToString(resp)
-		_, err = io.WriteString(w, data)
+		marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
+		data, _ := marshalOptions.Marshal(resp.(protoreflect.ProtoMessage))
+		_, err = io.WriteString(w, string(data))
 		if err != nil {
 			log.Fatal("error writing to ResponseWriter: ", err)
 		}

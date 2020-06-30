@@ -1,8 +1,8 @@
 package infrabin
 
 import (
-	"log"
 	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -10,10 +10,9 @@ import (
 )
 
 type HTTPServer struct {
-	Name string
+	Name   string
 	Server *http.Server
 }
-
 
 func (s *HTTPServer) ListenAndServe() {
 	log.Printf("Starting %s server on %s", s.Name, s.Server.Addr)
@@ -22,10 +21,9 @@ func (s *HTTPServer) ListenAndServe() {
 	}
 }
 
-
 func (s *HTTPServer) Shutdown() {
 	log.Printf("Shutting down %s server with 15s graceful shutdown", s.Name)
-	ctx, cancel := context.WithTimeout(context.Background(), 15 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	if err := s.Server.Shutdown(ctx); err != nil {
@@ -37,8 +35,17 @@ func (s *HTTPServer) Shutdown() {
 
 func NewHTTPServer() *HTTPServer {
 	r := mux.NewRouter()
+	is := InfrabinService{}
 
-	r.HandleFunc("/", RootHandler)
+	r.HandleFunc("/", MakeHandler(
+		func(ctx context.Context, req interface{}) (i interface{}, e error) {
+			return is.Root(ctx, req.(*Empty))
+		},
+		func(r *http.Request) (interface{}, error) {
+			return &Empty{}, nil
+		},
+	)).Name("Root")
+
 	r.HandleFunc("/delay/{seconds}", DelayHandler)
 	r.HandleFunc("/headers", HeadersHandler)
 	r.HandleFunc("/env/{env_var}", EnvHandler)
@@ -68,4 +75,3 @@ func NewAdminServer() *HTTPServer {
 
 	return &HTTPServer{Name: "admin", Server: server}
 }
-
