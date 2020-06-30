@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	helpers "github.com/maruina/go-infrabin/pkg/helpers"
+	helpers "github.com/maruina/go-infrabin/internal/helpers"
 )
 
 func TestRootHandler(t *testing.T) {

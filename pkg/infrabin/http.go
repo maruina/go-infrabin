@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/maruina/go-infrabin/pkg/helpers"
+	"github.com/maruina/go-infrabin/internal/helpers"
 )
 
 // RootHandler handles the "/" endpoint
