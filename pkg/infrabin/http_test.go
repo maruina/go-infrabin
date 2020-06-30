@@ -1,4 +1,4 @@
-package main
+package infrabin
 
 import (
 	"net/http"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	helpers "github.com/maruina/go-infrabin/internal/helpers"
+	helpers "github.com/maruina/go-infrabin/pkg/helpers"
 )
 
 func TestRootHandler(t *testing.T) {
