@@ -16,3 +16,6 @@ go-infrabin
 
 # Add chart
 !chart/go-infrabin/
+
+.idea/
+
