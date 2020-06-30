@@ -42,7 +42,7 @@ func TestRootHandler(t *testing.T) {
 
 	if rr.Body.String() != string(data) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), data)
+			rr.Body.String(), string(data))
 	}
 }
 
@@ -112,6 +112,141 @@ func TestRootHandlerKubernetes(t *testing.T) {
 
 	if rr.Body.String() != string(data) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), string(data))
+	}
+}
+
+
+func TestDelayHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/delay", nil)
+	req = mux.SetURLVars(req, map[string]string{"seconds": "1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	delayHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Delay").GetHandler().ServeHTTP
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(delayHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	expected := Response{Delay: 1}
+	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
+	data, _ := marshalOptions.Marshal(&expected)
+
+	if rr.Body.String() != string(data){
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), string(data))
+	}
+}
+
+
+
+func TestDelayHandlerBadRequest(t *testing.T) {
+	req, err := http.NewRequest("GET", "/delay", nil)
+	req = mux.SetURLVars(req, map[string]string{"seconds": "abc"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	delayHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Delay").GetHandler().ServeHTTP
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(delayHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+
+	expected := Response{Error: "Failed to build request: strconv.Atoi: parsing \"abc\": invalid syntax"}
+	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
+	data, _ := marshalOptions.Marshal(&expected)
+
+	if rr.Body.String() != string(data) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), string(data))
+	}
+}
+
+
+
+func TestLivenessHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/healthcheck/liveness", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	livenessHandler := NewAdminServer().Server.Handler.(*mux.Router).Get("Liveness").GetHandler().ServeHTTP
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(livenessHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	expected := Response{Liveness: "pass"}
+	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
+	data, _ := marshalOptions.Marshal(&expected)
+
+	if rr.Body.String() != string(data) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), string(data))
+	}
+}
+
+
+
+func TestEnvHandler(t *testing.T) {
+	if err := os.Setenv("TEST_ENV", "foo"); err != nil {
+		t.Errorf("cannot set environment variable")
+	}
+	req, err := http.NewRequest("GET", "/env", nil)
+	req = mux.SetURLVars(req, map[string]string{"env_var": "TEST_ENV"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	envHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Env").GetHandler().ServeHTTP
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(envHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	var expected helpers.Response
+	expected.Env = map[string]string{
+		"TEST_ENV": "foo",
+	}
+	data := helpers.MarshalResponseToString(expected)
+
+	if rr.Body.String() != data {
+		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), data)
+	}
+}
+
+func TestEnvHandlerNotFound(t *testing.T) {
+	req, err := http.NewRequest("GET", "/env", nil)
+	req = mux.SetURLVars(req, map[string]string{"env_var": "NOT_FOUND"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	envHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Env").GetHandler().ServeHTTP
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(envHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusServiceUnavailable {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusServiceUnavailable)
 	}
 }

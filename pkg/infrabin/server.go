@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -38,7 +39,7 @@ func NewHTTPServer() *HTTPServer {
 	is := InfrabinService{}
 
 	r.HandleFunc("/", MakeHandler(
-		func(ctx context.Context, req interface{}) (i interface{}, e error) {
+		func(ctx context.Context, req interface{}) (*Response, error) {
 			return is.Root(ctx, req.(*Empty))
 		},
 		func(r *http.Request) (interface{}, error) {
@@ -46,9 +47,31 @@ func NewHTTPServer() *HTTPServer {
 		},
 	)).Name("Root")
 
-	r.HandleFunc("/delay/{seconds}", DelayHandler)
+	r.HandleFunc("/delay/{seconds}", MakeHandler(
+		func(ctx context.Context, req interface{}) (*Response, error) {
+			return is.Delay(ctx, req.(*DelayRequest))
+		},
+		func(request *http.Request) (i interface{}, e error) {
+			vars := mux.Vars(request)
+			if seconds, err := strconv.Atoi(vars["seconds"]); err != nil {
+				return nil, err
+			} else {
+				return &DelayRequest{Duration: int32(seconds)}, nil
+			}
+		},
+	)).Name("Delay")
+
+	r.HandleFunc("/env/{env_var}", MakeHandler(
+		func(ctx context.Context, req interface{}) (*Response, error) {
+			return is.Env(ctx, req.(*EnvRequest))
+		},
+		func(request *http.Request) (i interface{}, e error) {
+			vars := mux.Vars(request)
+			return &EnvRequest{EnvVar: vars["env_var"]}, nil
+		},
+	)).Name("Env")
+
 	r.HandleFunc("/headers", HeadersHandler)
-	r.HandleFunc("/env/{env_var}", EnvHandler)
 
 	server := &http.Server{
 		Handler: r,
@@ -62,8 +85,16 @@ func NewHTTPServer() *HTTPServer {
 
 func NewAdminServer() *HTTPServer {
 	r := mux.NewRouter()
+	is := InfrabinService{}
 
-	r.HandleFunc("/liveness", LivenessHandler)
+	r.HandleFunc("/liveness", MakeHandler(
+		func(ctx context.Context, req interface{}) (*Response, error) {
+			return is.Liveness(ctx, req.(*Empty))
+		},
+		func(request *http.Request) (i interface{}, e error) {
+			return &Empty{}, nil
+		},
+	)).Name("Liveness")
 
 	server := &http.Server{
 		Handler: r,

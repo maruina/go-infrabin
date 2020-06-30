@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package infrabin;
 
+option go_package = "github.com/maruina/go-infrabin/pkg/infrabin;infrabin";
+
 // Empty is the null value for parameters.
 message Empty {
 
@@ -11,7 +13,7 @@ message Response {
 	string              hostname     = 1;
 	KubeResponse        kubernetes   = 2;
 	string              liveness     = 3;
-	string              delay        = 4;
+	int32               delay        = 4;
 	string              error        = 5;
 	map<string, string> headers      = 6;
 	map<string, string> env          = 7;
@@ -25,7 +27,19 @@ message KubeResponse {
 }
 
 
+message DelayRequest {
+    int32 duration = 1;
+}
+
+message EnvRequest {
+    string env_var = 1;
+}
+
+
 // The echo infrabin service replies with the message it received.
 service Infrabin {
   rpc Root(Empty) returns (Response) {}
+  rpc Delay(DelayRequest) returns (Response) {}
+  rpc Liveness(Empty) returns (Response) {}
+  rpc Env(EnvRequest) returns (Response) {}
 }

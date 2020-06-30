@@ -2,42 +2,51 @@ package infrabin
 
 import (
 	"context"
+	"fmt"
+	"github.com/maruina/go-infrabin/internal/helpers"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"log"
 	"net/http"
-	"strconv"
-	"time"
-
-	"github.com/gorilla/mux"
-	"google.golang.org/grpc"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/reflect/protoreflect"
-
-	"github.com/maruina/go-infrabin/internal/helpers"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 )
 
+type GRPCHandlerFunc func(context.Context, interface{}) (*Response, error)
 type RequestBuilder func(*http.Request) (interface{}, error)
 
+type Error struct {
+	e *spb.Status
+}
+func (e Error) Error() string {
+	return fmt.Sprintf("rpc error: code = %s desc = %s", codes.Code(e.e.GetCode()), e.e.GetMessage())
+}
+
 //func(context.Content, interface{}) (interface{}, error)
-func MakeHandler(grpcHandler grpc.UnaryHandler, requestBuilder RequestBuilder) http.HandlerFunc {
+func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
+		var (
+			response *Response
+			err error
+		)
 		request, err := requestBuilder(r)
 		if err != nil {
-			log.Fatalf("Failed to build request: %v", err)
-		}
-
-		resp, err := grpcHandler(context.Background(), request)
-		if err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
+			w.WriteHeader(http.StatusBadRequest)
+			response = &Response{Error: fmt.Sprintf("Failed to build request: %v", err)}
 		} else {
-			w.WriteHeader(http.StatusOK)
+			response, err = grpcHandler(context.Background(), request)
+			if err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+			} else {
+				w.WriteHeader(http.StatusOK)
+			}
 		}
 
 		marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
-		data, _ := marshalOptions.Marshal(resp.(protoreflect.ProtoMessage))
+		data, _ := marshalOptions.Marshal(response)
 		_, err = io.WriteString(w, string(data))
 		if err != nil {
 			log.Fatal("error writing to ResponseWriter: ", err)
@@ -45,52 +54,6 @@ func MakeHandler(grpcHandler grpc.UnaryHandler, requestBuilder RequestBuilder) h
 	}
 }
 
-// LivenessHandler handles the "/liveness" endpoint
-func LivenessHandler(w http.ResponseWriter, r *http.Request) {
-	var resp helpers.Response
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	resp.Liveness = "pass"
-	data := helpers.MarshalResponseToString(resp)
-	_, err := io.WriteString(w, data)
-	if err != nil {
-		log.Fatal("error writing to ResponseWriter", err)
-	}
-}
-
-// DelayHandler handles the "/delay" endpoint
-func DelayHandler(w http.ResponseWriter, r *http.Request) {
-	var resp helpers.Response
-	var seconds int
-	vars := mux.Vars(r)
-	w.Header().Set("Content-Type", "application/json")
-
-	seconds, err := strconv.Atoi(vars["seconds"])
-	if err != nil {
-		resp.Error = "cannot convert seconds to integer"
-		data := helpers.MarshalResponseToString(resp)
-		w.WriteHeader(http.StatusBadRequest)
-		_, err = io.WriteString(w, data)
-		if err != nil {
-			log.Fatal("error writing to ResponseWriter", err)
-		}
-	} else {
-		maxDelay, err := strconv.Atoi(helpers.GetEnv("INFRABIN_MAX_DELAY", "120"))
-		if err != nil {
-			log.Fatalf("cannot convert env var INFRABIN_MAX_DELAY to integer: %v", err)
-		}
-		time.Sleep(time.Duration(helpers.Min(seconds, maxDelay)) * time.Second)
-
-		resp.Delay = strconv.Itoa(seconds)
-		data := helpers.MarshalResponseToString(resp)
-
-		w.WriteHeader(http.StatusOK)
-		_, err = io.WriteString(w, data)
-		if err != nil {
-			log.Fatal("error writing to ResponseWriter", err)
-		}
-	}
-}
 
 // HeadersHandler handles the headers endpoint
 func HeadersHandler(w http.ResponseWriter, r *http.Request) {
@@ -102,35 +65,5 @@ func HeadersHandler(w http.ResponseWriter, r *http.Request) {
 	_, err := io.WriteString(w, data)
 	if err != nil {
 		log.Fatal("error writing to ResponseWriter: ", err)
-	}
-}
-
-// EnvHandler handles the env endpoint
-func EnvHandler(w http.ResponseWriter, r *http.Request) {
-	var resp helpers.Response
-	vars := mux.Vars(r)
-	w.Header().Set("Content-Type", "application/json")
-	value := helpers.GetEnv(vars["env_var"], "")
-
-	if value == "" {
-		data := helpers.MarshalResponseToString(resp)
-		w.WriteHeader(http.StatusNotFound)
-		_, err := io.WriteString(w, data)
-		if err != nil {
-			log.Fatal("error writing to ResponseWriter", err)
-		}
-	} else {
-
-		resp.Env = map[string]string{
-			vars["env_var"]: value,
-		}
-		data := helpers.MarshalResponseToString(resp)
-
-		w.WriteHeader(http.StatusOK)
-		_, err := io.WriteString(w, data)
-		if err != nil {
-			log.Fatal("error writing to ResponseWriter", err)
-		}
-
 	}
 }
