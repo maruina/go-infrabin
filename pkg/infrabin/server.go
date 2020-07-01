@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/textproto"
 	"strconv"
 	"time"
 
@@ -71,7 +72,19 @@ func NewHTTPServer() *HTTPServer {
 		},
 	)).Name("Env")
 
-	r.HandleFunc("/headers", HeadersHandler)
+	r.HandleFunc("/headers", MakeHandler(
+		func(ctx context.Context, request interface{}) (*Response, error) {
+			return is.Headers(ctx, request.(*HeadersRequest))
+		},
+		func(request *http.Request) (i interface{}, e error) {
+			inputHeaders := textproto.MIMEHeader(request.Header)
+			headers := make(map[string]string)
+			for key := range inputHeaders {
+				headers[key] = inputHeaders.Get(key)
+			}
+			return &HeadersRequest{Headers: headers}, nil
+		},
+	)).Name("Headers")
 
 	server := &http.Server{
 		Handler: r,

@@ -2,9 +2,11 @@ package infrabin
 
 import (
 	"context"
+	"google.golang.org/grpc/metadata"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -66,4 +68,16 @@ func (s *InfrabinService) Env(ctx context.Context, request *EnvRequest) (*Respon
 	} else {
 		return &Response{Env: map[string]string{request.EnvVar: value}}, nil
 	}
+}
+
+
+func (s *InfrabinService) Headers(ctx context.Context, request *HeadersRequest) (*Response, error) {
+	if request.Headers == nil {
+		request.Headers = make(map[string]string)
+	}
+	md, _ := metadata.FromIncomingContext(ctx)
+	for key := range md {
+		request.Headers[key] = strings.Join(md.Get(key), ",")
+	}
+	return &Response{Headers: request.Headers}, nil
 }

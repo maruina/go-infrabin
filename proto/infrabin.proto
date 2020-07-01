@@ -36,10 +36,16 @@ message EnvRequest {
 }
 
 
+message HeadersRequest {
+    map<string, string> headers = 1;
+}
+
+
 // The echo infrabin service replies with the message it received.
 service Infrabin {
   rpc Root(Empty) returns (Response) {}
   rpc Delay(DelayRequest) returns (Response) {}
   rpc Liveness(Empty) returns (Response) {}
   rpc Env(EnvRequest) returns (Response) {}
+  rpc Headers(HeadersRequest) returns (Response) {}
 }

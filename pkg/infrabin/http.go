@@ -3,24 +3,15 @@ package infrabin
 import (
 	"context"
 	"fmt"
-	"github.com/maruina/go-infrabin/internal/helpers"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"log"
 	"net/http"
-	spb "google.golang.org/genproto/googleapis/rpc/status"
 )
 
-type GRPCHandlerFunc func(context.Context, interface{}) (*Response, error)
+type GRPCHandlerFunc func(ctx context.Context, request interface{}) (*Response, error)
 type RequestBuilder func(*http.Request) (interface{}, error)
 
-type Error struct {
-	e *spb.Status
-}
-func (e Error) Error() string {
-	return fmt.Sprintf("rpc error: code = %s desc = %s", codes.Code(e.e.GetCode()), e.e.GetMessage())
-}
 
 //func(context.Content, interface{}) (interface{}, error)
 func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) http.HandlerFunc {
@@ -54,16 +45,3 @@ func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) htt
 	}
 }
 
-
-// HeadersHandler handles the headers endpoint
-func HeadersHandler(w http.ResponseWriter, r *http.Request) {
-	var resp helpers.Response
-	w.Header().Set("Content-Type", "application/json")
-	resp.Headers = &r.Header
-
-	data := helpers.MarshalResponseToString(resp)
-	_, err := io.WriteString(w, data)
-	if err != nil {
-		log.Fatal("error writing to ResponseWriter: ", err)
-	}
-}

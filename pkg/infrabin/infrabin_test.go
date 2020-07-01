@@ -250,3 +250,32 @@ func TestEnvHandlerNotFound(t *testing.T) {
 			status, http.StatusServiceUnavailable)
 	}
 }
+
+
+func TestHeadersHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/headers", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Request-Id", "Test-Header")
+
+	headersHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Headers").GetHandler().ServeHTTP
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(headersHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	expected := Response{Headers: map[string]string{"X-Request-Id": "Test-Header"}}
+	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
+	data, _ := marshalOptions.Marshal(&expected)
+
+
+	if rr.Body.String() != string(data) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), string(data))
+	}
+}
