@@ -93,3 +93,42 @@ See the [README](./chart/go-infrabin/README.md).
         "error": "<reason>"
     }
   ```
+
+
+### Contributing
+
+To build locally, ensure you have compiled the protocol schemas. You
+will need the `protoc` binary which can install by following
+[these instructions][protoc]. `make run` will compile the protocol
+buffers, or you can run:
+
+```shell
+make protoc
+```
+
+To run the tests:
+
+```shell
+make test
+```
+
+To run the server locally:
+
+```shell
+make run
+```
+
+To test http:
+
+```shell
+http localhost:8888/
+```
+
+To test grpc, use your favourite grpc tool like [evans][evans]:
+
+```shell
+echo '{}' | evans -r cli call infrabin.Infrabin.Root
+```
+
+[protoc]: https://grpc.io/docs/languages/go/quickstart/#prerequisites
+[evans]: https://github.com/ktr0731/evans/

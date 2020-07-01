@@ -7,14 +7,13 @@ import (
 	"github.com/maruina/go-infrabin/pkg/infrabin"
 )
 
-
 func main() {
 	// Create a channel to catch signals
 	finish := make(chan os.Signal, 1)
 	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
-    // SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
+	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
 	signal.Notify(finish, os.Interrupt)
-	
+
 	// run service server in background
 	server := infrabin.NewHTTPServer()
 	go server.ListenAndServe()
@@ -23,9 +22,14 @@ func main() {
 	admin := infrabin.NewAdminServer()
 	go admin.ListenAndServe()
 
+	// run grpc server in background
+	grpcServer := infrabin.NewGRPCServer()
+	go grpcServer.ListenAndServe()
+
 	// wait for SIGINT
 	<-finish
 
 	admin.Shutdown()
 	server.Shutdown()
+	grpcServer.Shutdown()
 }
