@@ -22,6 +22,11 @@ jobs:
     - name: Unshallow
       run: git fetch --prune --unshallow
 
+    - name: Genereate code for infrabin protofile
+      uses: squzy/protoc-actions@v2.0.9
+      with:
+        path: --proto_path=proto/ --go_out=plugins=grpc:pkg/infrabin --go_opt=paths=source_relative proto/infrabin.proto
+
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v1
       with:
