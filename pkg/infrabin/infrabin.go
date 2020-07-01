@@ -11,6 +11,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	_struct "github.com/golang/protobuf/ptypes/struct"
 
 	"github.com/maruina/go-infrabin/internal/helpers"
 )
@@ -74,4 +75,8 @@ func (s *InfrabinService) Headers(ctx context.Context, request *HeadersRequest) 
 		request.Headers[key] = strings.Join(md.Get(key), ",")
 	}
 	return &Response{Headers: request.Headers}, nil
+}
+
+func (s *InfrabinService) AWS(ctx context.Context, request *_struct.Struct) (*_struct.Struct, error) {
+	return request, nil
 }

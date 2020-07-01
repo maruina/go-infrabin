@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package infrabin;
 
+import "google/protobuf/struct.proto";
+
 option go_package = "github.com/maruina/go-infrabin/pkg/infrabin;infrabin";
 
 // Empty is the null value for parameters.
@@ -48,4 +50,5 @@ service Infrabin {
   rpc Liveness(Empty) returns (Response) {}
   rpc Env(EnvRequest) returns (Response) {}
   rpc Headers(HeadersRequest) returns (Response) {}
+  rpc AWS(google.protobuf.Struct) returns (google.protobuf.Struct) {}
 }
