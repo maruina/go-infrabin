@@ -19,3 +19,6 @@ go-infrabin
 
 .idea/
 
+# Ignore compiled protobuf
+pkg/infrabin/infrabin.pb.go
+

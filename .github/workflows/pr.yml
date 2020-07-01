@@ -19,6 +19,11 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
+    - name: Genereate code for infrabin protofile
+      uses: squzy/protoc-actions@v2.0.9
+      with:
+        path: --proto_path=proto/ --go_out=plugins=grpc:pkg/infrabin --go_opt=paths=source_relative proto/infrabin.proto
+
     - name: Get dependencies
       run: |
         go get -v -t -d ./...
