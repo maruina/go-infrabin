@@ -221,15 +221,13 @@ func TestEnvHandler(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	var expected helpers.Response
-	expected.Env = map[string]string{
-		"TEST_ENV": "foo",
-	}
-	data := helpers.MarshalResponseToString(expected)
+	expected := Response{Env: map[string]string{"TEST_ENV": "foo"}}
+	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
+	data, _ := marshalOptions.Marshal(&expected)
 
-	if rr.Body.String() != data {
+	if rr.Body.String() != string(data) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), data)
+			rr.Body.String(), string(data))
 	}
 }
 
