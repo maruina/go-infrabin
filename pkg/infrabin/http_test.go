@@ -116,6 +116,32 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	}
 }
 
+func TestLivenessHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/healthcheck/liveness", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	livenessHandler := NewAdminServer().Server.Handler.(*mux.Router).Get("Liveness").GetHandler().ServeHTTP
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(livenessHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	expected := Response{Liveness: "pass"}
+	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
+	data, _ := marshalOptions.Marshal(&expected)
+
+	if rr.Body.String() != string(data) {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), string(data))
+	}
+}
+
 func TestDelayHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/delay", nil)
 	req = mux.SetURLVars(req, map[string]string{"seconds": "1"})
@@ -168,15 +194,16 @@ func TestDelayHandlerBadRequest(t *testing.T) {
 	}
 }
 
-func TestLivenessHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/healthcheck/liveness", nil)
+func TestHeadersHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/headers", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	req.Header.Set("X-Request-Id", "Test-Header")
 
-	livenessHandler := NewAdminServer().Server.Handler.(*mux.Router).Get("Liveness").GetHandler().ServeHTTP
+	headersHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Headers").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(livenessHandler)
+	handler := http.HandlerFunc(headersHandler)
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -184,7 +211,7 @@ func TestLivenessHandler(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	expected := Response{Liveness: "pass"}
+	expected := Response{Headers: map[string]string{"X-Request-Id": "Test-Header"}}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	data, _ := marshalOptions.Marshal(&expected)
 
@@ -239,32 +266,5 @@ func TestEnvHandlerNotFound(t *testing.T) {
 	if status := rr.Code; status != http.StatusServiceUnavailable {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusServiceUnavailable)
-	}
-}
-
-func TestHeadersHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/headers", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.Header.Set("X-Request-Id", "Test-Header")
-
-	headersHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Headers").GetHandler().ServeHTTP
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(headersHandler)
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	expected := Response{Headers: map[string]string{"X-Request-Id": "Test-Header"}}
-	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
-	data, _ := marshalOptions.Marshal(&expected)
-
-	if rr.Body.String() != string(data) {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), string(data))
 	}
 }
