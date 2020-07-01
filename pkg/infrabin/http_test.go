@@ -116,7 +116,6 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	}
 }
 
-
 func TestDelayHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/delay", nil)
 	req = mux.SetURLVars(req, map[string]string{"seconds": "1"})
@@ -137,13 +136,11 @@ func TestDelayHandler(t *testing.T) {
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	data, _ := marshalOptions.Marshal(&expected)
 
-	if rr.Body.String() != string(data){
+	if rr.Body.String() != string(data) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), string(data))
 	}
 }
-
-
 
 func TestDelayHandlerBadRequest(t *testing.T) {
 	req, err := http.NewRequest("GET", "/delay", nil)
@@ -171,8 +168,6 @@ func TestDelayHandlerBadRequest(t *testing.T) {
 	}
 }
 
-
-
 func TestLivenessHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/healthcheck/liveness", nil)
 	if err != nil {
@@ -198,8 +193,6 @@ func TestLivenessHandler(t *testing.T) {
 			rr.Body.String(), string(data))
 	}
 }
-
-
 
 func TestEnvHandler(t *testing.T) {
 	if err := os.Setenv("TEST_ENV", "foo"); err != nil {
@@ -249,7 +242,6 @@ func TestEnvHandlerNotFound(t *testing.T) {
 	}
 }
 
-
 func TestHeadersHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/headers", nil)
 	if err != nil {
@@ -270,7 +262,6 @@ func TestHeadersHandler(t *testing.T) {
 	expected := Response{Headers: map[string]string{"X-Request-Id": "Test-Header"}}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	data, _ := marshalOptions.Marshal(&expected)
-
 
 	if rr.Body.String() != string(data) {
 		t.Errorf("handler returned unexpected body: got %v want %v",

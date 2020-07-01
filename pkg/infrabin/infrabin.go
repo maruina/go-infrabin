@@ -39,7 +39,6 @@ func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error)
 	}
 }
 
-
 func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Response, error) {
 	maxDelay, err := strconv.Atoi(helpers.GetEnv("INFRABIN_MAX_DELAY", "120"))
 	if err != nil {
@@ -53,13 +52,9 @@ func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Re
 	return &Response{Delay: int32(seconds)}, nil
 }
 
-
-
 func (s *InfrabinService) Liveness(ctx context.Context, _ *Empty) (*Response, error) {
 	return &Response{Liveness: "pass"}, nil
 }
-
-
 
 func (s *InfrabinService) Env(ctx context.Context, request *EnvRequest) (*Response, error) {
 	value := helpers.GetEnv(request.EnvVar, "")
@@ -69,7 +64,6 @@ func (s *InfrabinService) Env(ctx context.Context, request *EnvRequest) (*Respon
 		return &Response{Env: map[string]string{request.EnvVar: value}}, nil
 	}
 }
-
 
 func (s *InfrabinService) Headers(ctx context.Context, request *HeadersRequest) (*Response, error) {
 	if request.Headers == nil {
