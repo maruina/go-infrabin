@@ -93,3 +93,36 @@ See the [README](./chart/go-infrabin/README.md).
         "error": "<reason>"
     }
   ```
+
+
+### Contributing
+
+To build locally, ensure you have compiled the protocol schemas with:
+
+```shell
+protoc --proto_path=proto/ --go_out=plugins=grpc:pkg/infrabin --go_opt=paths=source_relative proto/infrabin.proto
+```
+
+To run the tests:
+
+```shell
+make test
+```
+
+To run the server locally:
+
+```shell
+make run
+```
+
+To test http:
+
+```shell
+http localhost:8888/
+```
+
+To test grpc:
+
+```shell
+echo '{}' | evans -r cli call infrabin.Infrabin.Root
+```
