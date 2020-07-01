@@ -12,10 +12,10 @@ test-ci:
 	go test -v -covermode=count -coverprofile=coverage.out ./...
 	${HOME}/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken ${COVERALLS_TOKEN}
 
-proto:
+protoc:
 	protoc --proto_path=proto/ --go_out=plugins=grpc:pkg/infrabin --go_opt=paths=source_relative proto/infrabin.proto
 
-build: proto
+build: protoc
 	go build -o $(BINARY_NAME) cmd/$(BINARY_NAME)/main.go
 
 run: build
