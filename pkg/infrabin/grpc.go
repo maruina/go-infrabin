@@ -11,6 +11,7 @@ import (
 // Server wraps the gRPC server and implements infrabin.Infrabin
 type GRPCServer struct {
 	Name   string
+	Config *Config
 	Server *grpc.Server
 }
 
@@ -34,10 +35,10 @@ func (s *GRPCServer) Shutdown() {
 }
 
 // New creates a new rpc server.
-func NewGRPCServer() *GRPCServer {
+func NewGRPCServer(config *Config) *GRPCServer {
 	gs := grpc.NewServer()
-	s := &GRPCServer{Name: "grpc", Server: gs}
-	is := &InfrabinService{}
+	s := &GRPCServer{Name: "grpc", Config: config, Server: gs}
+	is := &InfrabinService{Config: config}
 	RegisterInfrabinServer(gs, is)
 	reflection.Register(gs)
 	return s

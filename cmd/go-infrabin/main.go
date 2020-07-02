@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"os/signal"
 
@@ -14,16 +15,27 @@ func main() {
 	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
 	signal.Notify(finish, os.Interrupt)
 
+	// Make config
+	config := &infrabin.Config{}
+
+	flag.BoolVar(
+		&config.EnableProxyEndpoint,
+		"enable-proxy-endpoint",
+		false,
+		"If true, enables proxy and aws endpoints",
+	)
+	flag.Parse()
+
 	// run service server in background
-	server := infrabin.NewHTTPServer()
+	server := infrabin.NewHTTPServer(config)
 	go server.ListenAndServe()
 
 	// run admin server in background
-	admin := infrabin.NewAdminServer()
+	admin := infrabin.NewAdminServer(config)
 	go admin.ListenAndServe()
 
 	// run grpc server in background
-	grpcServer := infrabin.NewGRPCServer()
+	grpcServer := infrabin.NewGRPCServer(config)
 	go grpcServer.ListenAndServe()
 
 	// wait for SIGINT
