@@ -70,6 +70,7 @@ func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) htt
 
 type HTTPServer struct {
 	Name   string
+	Config *Config
 	Server *http.Server
 }
 
@@ -92,9 +93,9 @@ func (s *HTTPServer) Shutdown() {
 	}
 }
 
-func NewHTTPServer() *HTTPServer {
+func NewHTTPServer(config *Config) *HTTPServer {
 	r := mux.NewRouter()
-	is := InfrabinService{}
+	is := InfrabinService{config}
 
 	r.HandleFunc("/", MakeHandler(
 		func(ctx context.Context, req interface{}) (proto.Message, error) {
@@ -145,10 +146,10 @@ func NewHTTPServer() *HTTPServer {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	return &HTTPServer{Name: "service", Server: server}
+	return &HTTPServer{Name: "service", Config: config, Server: server}
 }
 
-func NewAdminServer() *HTTPServer {
+func NewAdminServer(config *Config) *HTTPServer {
 	r := mux.NewRouter()
 	is := InfrabinService{}
 
@@ -167,5 +168,5 @@ func NewAdminServer() *HTTPServer {
 		ReadTimeout:  15 * time.Second,
 	}
 
-	return &HTTPServer{Name: "admin", Server: server}
+	return &HTTPServer{Name: "admin", Config: config, Server: server}
 }

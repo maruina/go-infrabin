@@ -22,7 +22,9 @@ import (
 
 const AWS_METADATA_ENDPOINT = "http://169.254.169.254/latest/meta-data/"
 
-type InfrabinService struct{}
+type InfrabinService struct{
+	Config *Config
+}
 
 func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error) {
 	fail := helpers.GetEnv("FAIL_ROOT_HANDLER", "")
@@ -84,6 +86,9 @@ func (s *InfrabinService) Headers(ctx context.Context, request *HeadersRequest) 
 }
 
 func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*structpb.Struct, error) {
+	if !s.Config.EnableProxyEndpoint {
+		return nil, status.Errorf(codes.Unimplemented, "Proxy endpoint disabled. Enabled with --enable-proxy-endpoint")
+	}
 	// Convert Struct into json []byte
 	requestBody, err := request.Body.MarshalJSON()
 	if err != nil {

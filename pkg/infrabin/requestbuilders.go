@@ -17,6 +17,29 @@ func BuildEmpty(r *http.Request) (proto.Message, error) {
 	return &Empty{}, nil
 }
 
+func BuildDelayRequest(request *http.Request) (proto.Message, error) {
+	vars := mux.Vars(request)
+	if seconds, err := strconv.Atoi(vars["seconds"]); err != nil {
+		return nil, err
+	} else {
+		return &DelayRequest{Duration: int32(seconds)}, nil
+	}
+}
+
+func BuildEnvRequest(request *http.Request) (proto.Message, error) {
+	vars := mux.Vars(request)
+	return &EnvRequest{EnvVar: vars["env_var"]}, nil
+}
+
+func BuildHeadersRequest(request *http.Request) (proto.Message, error) {
+	inputHeaders := textproto.MIMEHeader(request.Header)
+	headers := make(map[string]string)
+	for key := range inputHeaders {
+		headers[key] = inputHeaders.Get(key)
+	}
+	return &HeadersRequest{Headers: headers}, nil
+}
+
 func BuildProxyRequest(request *http.Request) (proto.Message, error) {
 	// Read request body
 	inputBody, err := ioutil.ReadAll(request.Body)
@@ -43,29 +66,6 @@ func BuildProxyRequest(request *http.Request) (proto.Message, error) {
 		Headers: headers,
 	}
 	return proxyRequest, nil
-}
-
-func BuildHeadersRequest(request *http.Request) (proto.Message, error) {
-	inputHeaders := textproto.MIMEHeader(request.Header)
-	headers := make(map[string]string)
-	for key := range inputHeaders {
-		headers[key] = inputHeaders.Get(key)
-	}
-	return &HeadersRequest{Headers: headers}, nil
-}
-
-func BuildEnvRequest(request *http.Request) (proto.Message, error) {
-	vars := mux.Vars(request)
-	return &EnvRequest{EnvVar: vars["env_var"]}, nil
-}
-
-func BuildDelayRequest(request *http.Request) (proto.Message, error) {
-	vars := mux.Vars(request)
-	if seconds, err := strconv.Atoi(vars["seconds"]); err != nil {
-		return nil, err
-	} else {
-		return &DelayRequest{Duration: int32(seconds)}, nil
-	}
 }
 
 func BuildAWSRequest(request *http.Request) (proto.Message, error) {
