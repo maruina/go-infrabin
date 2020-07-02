@@ -1,13 +1,14 @@
 package infrabin
 
 import (
-	"github.com/gorilla/mux"
-	"github.com/maruina/go-infrabin/internal/helpers"
-	"google.golang.org/protobuf/encoding/protojson"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/gorilla/mux"
+	"github.com/maruina/go-infrabin/internal/helpers"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestRootHandler(t *testing.T) {
@@ -16,7 +17,7 @@ func TestRootHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rootHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Root").GetHandler().ServeHTTP
+	rootHandler := NewHTTPServer(&Config{}).Server.Handler.(*mux.Router).Get("Root").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(rootHandler)
 	handler.ServeHTTP(rr, req)
@@ -55,7 +56,7 @@ func TestFailRootHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rootHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Root").GetHandler().ServeHTTP
+	rootHandler := NewHTTPServer(&Config{}).Server.Handler.(*mux.Router).Get("Root").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(rootHandler)
 	handler.ServeHTTP(rr, req)
@@ -85,7 +86,7 @@ func TestRootHandlerKubernetes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rootHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Root").GetHandler().ServeHTTP
+	rootHandler := NewHTTPServer(&Config{}).Server.Handler.(*mux.Router).Get("Root").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(rootHandler)
 	handler.ServeHTTP(rr, req)
@@ -122,7 +123,7 @@ func TestLivenessHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	livenessHandler := NewAdminServer().Server.Handler.(*mux.Router).Get("Liveness").GetHandler().ServeHTTP
+	livenessHandler := NewAdminServer(&Config{}).Server.Handler.(*mux.Router).Get("Liveness").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(livenessHandler)
 	handler.ServeHTTP(rr, req)
@@ -149,7 +150,7 @@ func TestDelayHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	delayHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Delay").GetHandler().ServeHTTP
+	delayHandler := NewHTTPServer(&Config{}).Server.Handler.(*mux.Router).Get("Delay").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(delayHandler)
 	handler.ServeHTTP(rr, req)
@@ -175,7 +176,7 @@ func TestDelayHandlerBadRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	delayHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Delay").GetHandler().ServeHTTP
+	delayHandler := NewHTTPServer(&Config{}).Server.Handler.(*mux.Router).Get("Delay").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(delayHandler)
 	handler.ServeHTTP(rr, req)
@@ -201,7 +202,7 @@ func TestHeadersHandler(t *testing.T) {
 	}
 	req.Header.Set("X-Request-Id", "Test-Header")
 
-	headersHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Headers").GetHandler().ServeHTTP
+	headersHandler := NewHTTPServer(&Config{}).Server.Handler.(*mux.Router).Get("Headers").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(headersHandler)
 	handler.ServeHTTP(rr, req)
@@ -231,7 +232,7 @@ func TestEnvHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	envHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Env").GetHandler().ServeHTTP
+	envHandler := NewHTTPServer(&Config{}).Server.Handler.(*mux.Router).Get("Env").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(envHandler)
 	handler.ServeHTTP(rr, req)
@@ -258,7 +259,7 @@ func TestEnvHandlerNotFound(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	envHandler := NewHTTPServer().Server.Handler.(*mux.Router).Get("Env").GetHandler().ServeHTTP
+	envHandler := NewHTTPServer(&Config{}).Server.Handler.(*mux.Router).Get("Env").GetHandler().ServeHTTP
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(envHandler)
 	handler.ServeHTTP(rr, req)

@@ -6,16 +6,16 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/textproto"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type GRPCHandlerFunc func(ctx context.Context, request interface{}) (*Response, error)
-type RequestBuilder func(*http.Request) (interface{}, error)
+type GRPCHandlerFunc func(ctx context.Context, request interface{}) (proto.Message, error)
+type RequestBuilder func(*http.Request) (proto.Message, error)
 
 //func(context.Content, interface{}) (interface{}, error)
 func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) http.HandlerFunc {
@@ -24,7 +24,7 @@ func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) htt
 		w.Header().Set("Content-Type", "application/json")
 
 		var (
-			response *Response
+			response proto.Message
 			err      error
 		)
 		request, err := requestBuilder(r)
@@ -34,7 +34,26 @@ func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) htt
 		} else {
 			response, err = grpcHandler(r.Context(), request)
 			if err != nil {
+				log.Printf("Error from grpcHandler: %v", err)
 				w.WriteHeader(http.StatusServiceUnavailable)
+				// If the response is of Type Response we can add Error
+				if resp, ok := response.(*Response); ok {
+					if resp == nil {
+						resp = &Response{}
+					}
+					resp.Error = fmt.Sprintf("Error from grpcHandler: %v", err)
+					response = resp
+				}
+				// If the response is of Type Struct we can add Error
+				if resp, ok := response.(*structpb.Struct); ok {
+					if resp == nil {
+						resp = &structpb.Struct{Fields: make(map[string]*structpb.Value)}
+					}
+					resp.Fields["error"] = structpb.NewStringValue(
+						fmt.Sprintf("Error from grpcHandler: %v", err),
+					)
+					response = resp
+				}
 			} else {
 				w.WriteHeader(http.StatusOK)
 			}
@@ -51,6 +70,7 @@ func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) htt
 
 type HTTPServer struct {
 	Name   string
+	Config *Config
 	Server *http.Server
 }
 
@@ -73,56 +93,51 @@ func (s *HTTPServer) Shutdown() {
 	}
 }
 
-func NewHTTPServer() *HTTPServer {
+func NewHTTPServer(config *Config) *HTTPServer {
 	r := mux.NewRouter()
-	is := InfrabinService{}
+	is := InfrabinService{config}
 
 	r.HandleFunc("/", MakeHandler(
-		func(ctx context.Context, req interface{}) (*Response, error) {
+		func(ctx context.Context, req interface{}) (proto.Message, error) {
 			return is.Root(ctx, req.(*Empty))
 		},
-		func(r *http.Request) (interface{}, error) {
-			return &Empty{}, nil
-		},
+		BuildEmpty,
 	)).Name("Root")
 
 	r.HandleFunc("/delay/{seconds}", MakeHandler(
-		func(ctx context.Context, req interface{}) (*Response, error) {
+		func(ctx context.Context, req interface{}) (proto.Message, error) {
 			return is.Delay(ctx, req.(*DelayRequest))
 		},
-		func(request *http.Request) (i interface{}, e error) {
-			vars := mux.Vars(request)
-			if seconds, err := strconv.Atoi(vars["seconds"]); err != nil {
-				return nil, err
-			} else {
-				return &DelayRequest{Duration: int32(seconds)}, nil
-			}
-		},
+		BuildDelayRequest,
 	)).Name("Delay")
 
 	r.HandleFunc("/env/{env_var}", MakeHandler(
-		func(ctx context.Context, req interface{}) (*Response, error) {
+		func(ctx context.Context, req interface{}) (proto.Message, error) {
 			return is.Env(ctx, req.(*EnvRequest))
 		},
-		func(request *http.Request) (i interface{}, e error) {
-			vars := mux.Vars(request)
-			return &EnvRequest{EnvVar: vars["env_var"]}, nil
-		},
+		BuildEnvRequest,
 	)).Name("Env")
 
 	r.HandleFunc("/headers", MakeHandler(
-		func(ctx context.Context, request interface{}) (*Response, error) {
+		func(ctx context.Context, request interface{}) (proto.Message, error) {
 			return is.Headers(ctx, request.(*HeadersRequest))
 		},
-		func(request *http.Request) (i interface{}, e error) {
-			inputHeaders := textproto.MIMEHeader(request.Header)
-			headers := make(map[string]string)
-			for key := range inputHeaders {
-				headers[key] = inputHeaders.Get(key)
-			}
-			return &HeadersRequest{Headers: headers}, nil
-		},
+		BuildHeadersRequest,
 	)).Name("Headers")
+
+	r.HandleFunc("/proxy", MakeHandler(
+		func(ctx context.Context, request interface{}) (proto.Message, error) {
+			return is.Proxy(ctx, request.(*ProxyRequest))
+		},
+		BuildProxyRequest,
+	)).Methods("POST").Name("Proxy")
+
+	r.HandleFunc("/aws/{path}", MakeHandler(
+		func(ctx context.Context, request interface{}) (proto.Message, error) {
+			return is.AWS(ctx, request.(*AWSRequest))
+		},
+		BuildAWSRequest,
+	)).Name("AWS")
 
 	server := &http.Server{
 		Handler: r,
@@ -131,20 +146,18 @@ func NewHTTPServer() *HTTPServer {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	return &HTTPServer{Name: "service", Server: server}
+	return &HTTPServer{Name: "service", Config: config, Server: server}
 }
 
-func NewAdminServer() *HTTPServer {
+func NewAdminServer(config *Config) *HTTPServer {
 	r := mux.NewRouter()
 	is := InfrabinService{}
 
 	r.HandleFunc("/liveness", MakeHandler(
-		func(ctx context.Context, req interface{}) (*Response, error) {
+		func(ctx context.Context, req interface{}) (proto.Message, error) {
 			return is.Liveness(ctx, req.(*Empty))
 		},
-		func(request *http.Request) (i interface{}, e error) {
-			return &Empty{}, nil
-		},
+		BuildEmpty,
 	)).Name("Liveness")
 
 	server := &http.Server{
@@ -155,5 +168,5 @@ func NewAdminServer() *HTTPServer {
 		ReadTimeout:  15 * time.Second,
 	}
 
-	return &HTTPServer{Name: "admin", Server: server}
+	return &HTTPServer{Name: "admin", Config: config, Server: server}
 }

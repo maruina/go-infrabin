@@ -1,21 +1,30 @@
 package infrabin
 
 import (
+	"bytes"
 	"context"
-	"google.golang.org/grpc/metadata"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"google.golang.org/grpc/metadata"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/maruina/go-infrabin/internal/helpers"
 )
 
-type InfrabinService struct{}
+const AWS_METADATA_ENDPOINT = "http://169.254.169.254/latest/meta-data/"
+
+type InfrabinService struct{
+	Config *Config
+}
 
 func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error) {
 	fail := helpers.GetEnv("FAIL_ROOT_HANDLER", "")
@@ -74,4 +83,54 @@ func (s *InfrabinService) Headers(ctx context.Context, request *HeadersRequest) 
 		request.Headers[key] = strings.Join(md.Get(key), ",")
 	}
 	return &Response{Headers: request.Headers}, nil
+}
+
+func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*structpb.Struct, error) {
+	if !s.Config.EnableProxyEndpoint {
+		return nil, status.Errorf(codes.Unimplemented, "Proxy endpoint disabled. Enabled with --enable-proxy-endpoint")
+	}
+	// Convert Struct into json []byte
+	requestBody, err := request.Body.MarshalJSON()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Unable to marshal downstream request body: %v", err)
+	}
+
+	// Make upstream request from incoming request
+	req, err := http.NewRequestWithContext(ctx, request.Method, request.Url, bytes.NewReader(requestBody))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Unable to build request: %v", err)
+	}
+	for key, value := range request.Headers {
+		req.Header.Set(key, value)
+	}
+
+	// Send http request
+	client := http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Unable to reach %s: %v", request.Url, err)
+	}
+
+	// Read request body and close it
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Error reading upstream response body: %v", err)
+	}
+	if err = resp.Body.Close(); err != nil {
+		return nil, status.Errorf(codes.Internal, "Error closing upstream response: %v", err)
+	}
+
+	// Convert []bytes into json struct
+	var response structpb.Struct
+	if err := response.UnmarshalJSON(body); err != nil {
+		return nil, status.Errorf(codes.Internal, "Error creating Struct from upstream response json: %v", err)
+	}
+	return &response, nil
+}
+
+func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*structpb.Struct, error) {
+	if request.Path == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Path must not be empty")
+	}
+	return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: AWS_METADATA_ENDPOINT + request.Path})
 }
