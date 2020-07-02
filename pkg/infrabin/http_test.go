@@ -1,13 +1,14 @@
 package infrabin
 
 import (
-	"github.com/gorilla/mux"
-	"github.com/maruina/go-infrabin/internal/helpers"
-	"google.golang.org/protobuf/encoding/protojson"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/gorilla/mux"
+	"github.com/maruina/go-infrabin/internal/helpers"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestRootHandler(t *testing.T) {

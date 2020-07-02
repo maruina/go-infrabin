@@ -42,6 +42,17 @@ message HeadersRequest {
     map<string, string> headers = 1;
 }
 
+message ProxyRequest {
+    string method = 1;
+    string url = 2;
+    google.protobuf.Struct body = 3;
+    map<string, string> headers = 4;
+}
+
+message AWSRequest {
+    string path = 1;
+}
+
 
 // The echo infrabin service replies with the message it received.
 service Infrabin {
@@ -50,5 +61,6 @@ service Infrabin {
   rpc Liveness(Empty) returns (Response) {}
   rpc Env(EnvRequest) returns (Response) {}
   rpc Headers(HeadersRequest) returns (Response) {}
-  rpc AWS(google.protobuf.Struct) returns (google.protobuf.Struct) {}
+  rpc Proxy(ProxyRequest) returns (google.protobuf.Struct) {}
+  rpc AWS(AWSRequest) returns (google.protobuf.Struct) {}
 }
