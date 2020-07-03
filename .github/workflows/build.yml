@@ -63,7 +63,7 @@ jobs:
       with:
         repository: maruina/go-infrabin
         push: false
-      if: github.event_name == "pull_request"
+      if: github.event_name == 'pull_request'
 
     - name: Build and push latest docker image on master
       uses: docker/build-push-action@v1
@@ -72,4 +72,4 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         repository: maruina/go-infrabin
         tags: latest
-      if: github.event_name	== "push"
+      if: github.event_name	== 'push'
