@@ -5,6 +5,7 @@ RUN apt-get update && \
     wget -O protoc/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v3.12.3/protoc-3.12.3-linux-x86_64.zip && \
     unzip protoc/protoc.zip -d protoc/ && \
     mv protoc/bin/protoc /usr/local/bin/ && \
+    mv protoc/include /usr/local && \
     go get github.com/golang/protobuf/protoc-gen-go && \
     curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
 WORKDIR /go/src/go-infrabin
