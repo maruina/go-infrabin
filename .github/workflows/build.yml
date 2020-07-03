@@ -22,18 +22,20 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - name: Genereate code for infrabin protofile
-      uses: squzy/protoc-actions@v2.0.9
-      with:
-        path: --proto_path=proto/ --go_out=plugins=grpc:pkg/infrabin --go_opt=paths=source_relative proto/infrabin.proto
+    - name: Install Protoc
+      uses: arduino/setup-protoc@master
 
     - name: Get dependencies
       run: |
+        go get -u github.com/golang/protobuf/protoc-gen-go
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
+
+    - name: Genereate code for infrabin protofile
+      run: make protoc
 
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@v0.2.0
