@@ -46,17 +46,12 @@ jobs:
     - name: Test
       run: go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
 
-    - name: Convert coverage to lcov
-      uses: jandelgado/gcov2lcov-action@v1.0.2
-      with:
-          infile: coverage.out
-          outfile: coverage.lcov
-
-    - name: Coveralls GitHub Action
-      uses: coverallsapp/github-action@v1.1.1
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: coverage.lcov
+    - name: Send coverage
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        GO111MODULE=off go get github.com/mattn/goveralls
+        $(go env GOPATH)/bin/goveralls -coverprofile=coverage.out -service=github -ignore=pkg/infrabin/infrabin.pb.go
 
     - name: Build docker image on PR
       uses: docker/build-push-action@v1
