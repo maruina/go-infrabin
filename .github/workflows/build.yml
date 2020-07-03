@@ -49,11 +49,10 @@ jobs:
       run: go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
 
     - name: Send coverage
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        GO111MODULE=off go get github.com/mattn/goveralls
-        $(go env GOPATH)/bin/goveralls -coverprofile=coverage.out -service=github -ignore=pkg/infrabin/infrabin.pb.go
+      uses: shogo82148/actions-goveralls@v1
+      with:
+        path-to-profile: coverage.out
+        ignore: pkg/infrabin/infrabin.pb.go
 
     - name: Build docker image on PR
       uses: docker/build-push-action@v1
