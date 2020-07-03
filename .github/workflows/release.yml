@@ -26,7 +26,7 @@ jobs:
       uses: arduino/setup-protoc@master
 
     - name: Get protoc-gen-go
-      run: go get -u github.com/golang/protobuf/protoc-gen-go
+      run: GO111MODULE=off go get -u github.com/golang/protobuf/protoc-gen-go
 
     - name: Genereate code for infrabin protofile
       run: make protoc
