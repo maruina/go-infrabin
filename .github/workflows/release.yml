@@ -22,10 +22,14 @@ jobs:
     - name: Unshallow
       run: git fetch --prune --unshallow
 
+    - name: Install Protoc
+      uses: arduino/setup-protoc@master
+
+    - name: Get protoc-gen-go
+      run: go get -u github.com/golang/protobuf/protoc-gen-go
+
     - name: Genereate code for infrabin protofile
-      uses: squzy/protoc-actions@v2.0.9
-      with:
-        path: --proto_path=proto/ --go_out=plugins=grpc:pkg/infrabin --go_opt=paths=source_relative proto/infrabin.proto
+      run: make protoc
 
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v1
@@ -35,3 +39,11 @@ jobs:
         key: ${{ secrets.YOUR_PRIVATE_KEY }}
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push tagged docker image on master
+      uses: docker/build-push-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        repository: maruina/go-infrabin
+        tags: ${{ github.event.release.tag_name }}
