@@ -54,3 +54,9 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: coverage.lcov
+
+    - name: Build docker image
+      uses: docker/build-push-action@v1
+      with:
+        repository: maruina/go-infrabin
+        push: false
