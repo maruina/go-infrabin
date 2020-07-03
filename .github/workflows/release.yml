@@ -31,12 +31,15 @@ jobs:
     - name: Genereate code for infrabin protofile
       run: make protoc
 
+    - name: Get tag
+      uses: olegtarasov/get-tag@v2
+      id: tagName
+
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v1
+      uses: goreleaser/goreleaser-action@v2
       with:
         version: latest
         args: release --rm-dist
-        key: ${{ secrets.YOUR_PRIVATE_KEY }}
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -46,4 +49,4 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
         repository: maruina/go-infrabin
-        tags: ${{ github.event.release.tag_name }}
+        tags: ${{ steps.tagName.outputs.tag }}
