@@ -23,6 +23,7 @@ import (
 const AWS_METADATA_ENDPOINT = "http://169.254.169.254/latest/meta-data/"
 
 type InfrabinService struct{
+	UnimplementedInfrabinServer
 	Config *Config
 }
 

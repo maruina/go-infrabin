@@ -22,3 +22,4 @@ go-infrabin
 # Ignore compiled protobuf
 pkg/infrabin/infrabin.pb.go
 pkg/infrabin/infrabin.pb.gw.go
+pkg/infrabin/infrabin_grpc.pb.go
