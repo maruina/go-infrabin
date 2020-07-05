@@ -1,13 +1,13 @@
 package infrabin
 
 import (
-	"encoding/json"
 	"github.com/maruina/go-infrabin/internal/helpers"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 
 	"google.golang.org/protobuf/encoding/protojson"
@@ -40,11 +40,9 @@ func TestRootHandler(t *testing.T) {
 	}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	expectedBytes, _ := marshalOptions.Marshal(&expected)
-	// Cast to string and replace spaces. No need to replace if grpc-gateway uses protojson
-	expectedStr := strings.Replace(string(expectedBytes), " ", "", -1)
 
-	if rr.Body.String() != expectedStr {
-		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expectedStr)
+	if rr.Body.String() != string(expectedBytes) {
+		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), string(expectedBytes))
 	}
 }
 
@@ -107,11 +105,9 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	expectedBytes, _ := marshalOptions.Marshal(&expected)
-	// Cast to string and replace spaces. No need to replace if grpc-gateway uses protojson
-	expectedStr := strings.Replace(string(expectedBytes), " ", "", -1)
 
-	if rr.Body.String() != expectedStr {
-		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expectedStr)
+	if rr.Body.String() != string(expectedBytes) {
+		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), string(expectedBytes))
 	}
 }
 
@@ -173,19 +169,15 @@ func TestDelayHandlerBadRequest(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
 	}
 
-	expected := map[string]interface{}{
-		"code": 3,
-		"error": "type mismatch, parameter: duration, error: strconv.ParseInt: parsing \"abc\": invalid syntax",
-		"message": "type mismatch, parameter: duration, error: strconv.ParseInt: parsing \"abc\": invalid syntax",
-	}
-	var got map[string]interface{}
-	err = json.Unmarshal(rr.Body.Bytes(), &got)
-	if err != nil {
-		t.Errorf("Cannot unmarshal response: %v", err)
-	}
+	expected := status.New(
+		codes.InvalidArgument,
+		"type mismatch, parameter: duration, error: strconv.ParseInt: parsing \"abc\": invalid syntax",
+	)
+	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
+	expectedBytes, _ := marshalOptions.Marshal(expected.Proto())
 
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("handler returned unexpected body: got %v want %v", got, expected)
+	if !reflect.DeepEqual(rr.Body.Bytes(), expectedBytes) {
+		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), string(expectedBytes))
 	}
 }
 
@@ -194,17 +186,23 @@ func TestHeadersHandler(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("X-Request-Id", "Test-Header")
+	req.Header.Set("X-Request-Id", "Test-Header")  // Custom header
+	req.Header.Set("Accept", "*/*")  // Well known header
+	req.Header.Set("Grpc-Metadata-Foo", "bar")  // gRPC metadata
 
 	rr := httptest.NewRecorder()
 	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	if s := rr.Code; s != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", s, http.StatusOK)
 	}
 
-	expected := Response{Headers: map[string]string{"X-Request-Id": "Test-Header"}}
+	expected := Response{Headers: map[string]string{
+		"grpcgateway-x-request-id": "Test-Header",
+		"grpcgateway-accept": "*/*",
+		"foo": "bar",
+	}}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	data, _ := marshalOptions.Marshal(&expected)
 

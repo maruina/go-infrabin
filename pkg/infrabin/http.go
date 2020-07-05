@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
 
 type HTTPServer struct {
@@ -38,13 +38,22 @@ func NewHTTPServer(name string, addr string, config *Config) *HTTPServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mux := runtime.NewServeMux()
+	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(passThroughHeaderMatcher))
+
+	// Set default marshaller options
+	marshaler, _ := runtime.MarshalerForRequest(mux, &http.Request{})
+	jsonMarshaler := marshaler.(*runtime.HTTPBodyMarshaler).Marshaler.(*runtime.JSONPb)
+	jsonMarshaler.EmitUnpopulated = false
+	jsonMarshaler.UseProtoNames = true
+
+	// Register the handler to call local instance, i.e. no network calls
 	is := InfrabinService{}
 	err := RegisterInfrabinHandlerServer(ctx, mux, &is)
 	if err != nil {
 		log.Fatalf("gRPC server failed to register: %v", err)
 	}
 
+	// A standard http.Server
 	server := &http.Server{
 		Handler: mux,
 		Addr: addr,
@@ -57,8 +66,16 @@ func NewHTTPServer(name string, addr string, config *Config) *HTTPServer {
 	return &HTTPServer{Name: name, Config: config, Server: server}
 }
 
+// Keep the standard "Grpc-Metadata-" and well known behaviour
+// All other headers are passed, also with grpcgateway- prefix
+func passThroughHeaderMatcher(key string) (string, bool) {
+	if grpcKey, ok := runtime.DefaultHeaderMatcher(key); ok {
+		return grpcKey, ok
+	} else {
+		return runtime.MetadataPrefix + key, true
+	}
+}
+
 func init() {
-	pattern_Infrabin_Root_0 = runtime.MustPattern(
-		runtime.NewPattern(1, []int{2, 0}, []string{""}, "", runtime.AssumeColonVerbOpt(true)),
-	)
+	pattern_Infrabin_Root_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{""}, ""))
 }
