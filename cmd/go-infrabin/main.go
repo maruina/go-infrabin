@@ -27,11 +27,11 @@ func main() {
 	flag.Parse()
 
 	// run service server in background
-	server := infrabin.NewHTTPServer(config)
+	server := infrabin.NewHTTPServer("server", "0.0.0.0:8888", config)
 	go server.ListenAndServe()
 
 	// run admin server in background
-	admin := infrabin.NewAdminServer(config)
+	admin := infrabin.NewHTTPServer("admin", "0.0.0.0:8899", config)
 	go admin.ListenAndServe()
 
 	// run grpc server in background

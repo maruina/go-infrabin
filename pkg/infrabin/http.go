@@ -2,12 +2,11 @@ package infrabin
 
 import (
 	"context"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 )
 
 type HTTPServer struct {
@@ -35,41 +34,31 @@ func (s *HTTPServer) Shutdown() {
 	}
 }
 
-func NewHTTPServer(config *Config) *HTTPServer {
+func NewHTTPServer(name string, addr string, config *Config) *HTTPServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mux := runtime.NewServeMux(runtime.WithLastMatchWins())
+	mux := runtime.NewServeMux()
 	is := InfrabinService{}
 	err := RegisterInfrabinHandlerServer(ctx, mux, &is)
 	if err != nil {
-		log.Fatalf("gRPC %s server failed to register: %v", err)
+		log.Fatalf("gRPC server failed to register: %v", err)
 	}
 
 	server := &http.Server{
 		Handler: mux,
-		Addr:    "0.0.0.0:8888",
+		Addr: addr,
 		// Good practice: enforce timeouts
 		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		ReadTimeout: 15 * time.Second,
+		IdleTimeout: 30 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
 	}
-	return &HTTPServer{Name: "service", Config: config, Server: server}
+	return &HTTPServer{Name: name, Config: config, Server: server}
 }
 
-func NewAdminServer(config *Config) *HTTPServer {
-	r := mux.NewRouter()
-
-	r.HandleFunc("/liveness", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}).Name("Liveness")
-
-	server := &http.Server{
-		Handler: r,
-		Addr:    "0.0.0.0:8899",
-		// Good practice: enforce timeouts
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-
-	return &HTTPServer{Name: "admin", Config: config, Server: server}
+func init() {
+	pattern_Infrabin_Root_0 = runtime.MustPattern(
+		runtime.NewPattern(1, []int{2, 0}, []string{""}, "", runtime.AssumeColonVerbOpt(true)),
+	)
 }

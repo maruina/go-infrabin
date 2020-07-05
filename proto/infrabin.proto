@@ -10,11 +10,6 @@ option go_package = "github.com/maruina/go-infrabin/pkg/infrabin;infrabin";
 
 // The echo infrabin service replies with the message it received.
 service Infrabin {
-    rpc Root(Empty) returns (Response) {
-        option (google.api.http) = {
-            get: "//"
-        };
-    }
 
     rpc Delay(DelayRequest) returns (Response) {
         option (google.api.http) = {
@@ -45,6 +40,12 @@ service Infrabin {
     rpc AWS(AWSRequest) returns (google.protobuf.Struct) {
         option (google.api.http) = {
             get: "/aws/{path=**}"
+        };
+    }
+
+    rpc Root(Empty) returns (Response) {
+        option (google.api.http) = {
+            get: "//"
         };
     }
 }
