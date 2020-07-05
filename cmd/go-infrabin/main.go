@@ -16,7 +16,7 @@ func main() {
 	signal.Notify(finish, os.Interrupt)
 
 	// Make config
-	config := &infrabin.Config{}
+	config := infrabin.DefaultConfig()
 
 	flag.BoolVar(
 		&config.EnableProxyEndpoint,

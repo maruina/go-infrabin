@@ -1,6 +1,8 @@
 package infrabin
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/maruina/go-infrabin/internal/helpers"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,7 +22,7 @@ func TestRootHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
+	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -56,7 +58,7 @@ func TestFailRootHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
+	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusServiceUnavailable {
@@ -84,7 +86,7 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
+	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -118,7 +120,7 @@ func TestLivenessHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
+	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -141,7 +143,7 @@ func TestDelayHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
+	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -163,7 +165,7 @@ func TestDelayHandlerBadRequest(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
+	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
@@ -191,7 +193,7 @@ func TestHeadersHandler(t *testing.T) {
 	req.Header.Set("Grpc-Metadata-Foo", "bar")  // gRPC metadata
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
+	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if s := rr.Code; s != http.StatusOK {
@@ -221,7 +223,7 @@ func TestEnvHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
+	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -244,10 +246,79 @@ func TestEnvHandlerNotFound(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{}).Server.Handler
+	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+	}
+}
+
+func TestProxyHandler(t *testing.T) {
+	response, err := json.Marshal(map[string]string{"foo": "bar"})
+	if err != nil {
+		t.Fatalf("Failed to marshal fake response: %v", err)
+	}
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write(response); err != nil {
+			t.Fatalf("Failed to write fake response body: %v", err)
+		}
+	}))
+	defer mockServer.Close()
+
+	body, err := json.Marshal(map[string]interface{}{
+		"method": "POST",
+		"url": mockServer.URL,
+		"headers": map[string]string{"Accept": "*/*"},
+		"body": map[string]string{},
+	})
+	if err != nil {
+		t.Fatalf("Failed to make request body: %v", err)
+	}
+
+	req, err := http.NewRequest("POST", "/proxy", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("Failed to make request: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := NewHTTPServer("test", "",  &Config{EnableProxyEndpoint: true}).Server.Handler
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+	if !reflect.DeepEqual(rr.Body.Bytes(), response) {
+		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), string(response))
+	}
+}
+
+func TestAWSHandler(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("{}")); err != nil {
+			t.Fatalf("Failed to write fake response body: %v", err)
+		}
+	}))
+	config := &Config{
+		EnableProxyEndpoint: true,
+		AWSMetadataEndpoint: mockServer.URL,
+	}
+
+	req, err := http.NewRequest("GET", "/aws/foo", nil)
+	if err != nil {
+		t.Fatalf("Failed to make request: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := NewHTTPServer("test", "",  config).Server.Handler
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+	if !reflect.DeepEqual(rr.Body.String(), "{}") {
+		t.Errorf("handler returned unexpected body: got %v want {}", rr.Body.String())
 	}
 }

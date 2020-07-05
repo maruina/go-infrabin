@@ -47,7 +47,7 @@ func NewHTTPServer(name string, addr string, config *Config) *HTTPServer {
 	jsonMarshaler.UseProtoNames = true
 
 	// Register the handler to call local instance, i.e. no network calls
-	is := InfrabinService{}
+	is := InfrabinService{Config: config}
 	err := RegisterInfrabinHandlerServer(ctx, mux, &is)
 	if err != nil {
 		log.Fatalf("gRPC server failed to register: %v", err)
