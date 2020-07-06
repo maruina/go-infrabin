@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -20,9 +21,9 @@ import (
 	"github.com/maruina/go-infrabin/internal/helpers"
 )
 
-const AWS_METADATA_ENDPOINT = "http://169.254.169.254/latest/meta-data/"
-
+// Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
 type InfrabinService struct{
+	UnimplementedInfrabinServer
 	Config *Config
 }
 
@@ -132,5 +133,10 @@ func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*struct
 	if request.Path == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Path must not be empty")
 	}
-	return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: AWS_METADATA_ENDPOINT + request.Path})
+	u, err := url.Parse(s.Config.AWSMetadataEndpoint)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "s.Config.AWSMetadataEndpoint invalid: %v", err)
+	}
+	u.Path = request.Path
+	return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: u.String()})
 }

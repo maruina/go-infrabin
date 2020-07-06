@@ -5,8 +5,10 @@ on:
     tags:
       - '*'
 
+
 jobs:
   release:
+    name: Release
     runs-on: ubuntu-latest
     steps:
 
@@ -25,8 +27,14 @@ jobs:
     - name: Install Protoc
       uses: arduino/setup-protoc@master
 
-    - name: Get protoc-gen-go
-      run: GO111MODULE=off go get -u github.com/golang/protobuf/protoc-gen-go
+    - name: Get protoc go binaries
+      run: |
+        go mod tidy
+        go install \
+          github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
+          github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
+          google.golang.org/protobuf/cmd/protoc-gen-go \
+          google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
     - name: Genereate code for infrabin protofile
       run: make protoc

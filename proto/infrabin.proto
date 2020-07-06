@@ -3,13 +3,56 @@ syntax = "proto3";
 package infrabin;
 
 import "google/protobuf/struct.proto";
+import "google/api/annotations.proto";
 
 option go_package = "github.com/maruina/go-infrabin/pkg/infrabin;infrabin";
 
-// Empty is the null value for parameters.
-message Empty {
 
+// The echo infrabin service replies with the message it received.
+service Infrabin {
+
+    rpc Delay(DelayRequest) returns (Response) {
+        option (google.api.http) = {
+            get: "/delay/{duration}"
+        };
+    }
+    rpc Liveness(Empty) returns (Response) {
+        option (google.api.http) = {
+            get: "/liveness"
+        };
+    }
+    rpc Env(EnvRequest) returns (Response) {
+        option (google.api.http) = {
+            get: "/env/{env_var}"
+        };
+    }
+    rpc Headers(HeadersRequest) returns (Response) {
+        option (google.api.http) = {
+            get: "/headers"
+        };
+    }
+    rpc Proxy(ProxyRequest) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            post: "/proxy"
+            body: "*"
+        };
+    }
+    rpc AWS(AWSRequest) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            get: "/aws/{path=**}"
+        };
+    }
+
+    rpc Root(Empty) returns (Response) {
+        option (google.api.http) = {
+            get: "//"
+        };
+    }
 }
+
+
+// Empty is the null value for parameters.
+message Empty {}
 
 message Response {
 	string              hostname     = 1;
@@ -28,7 +71,6 @@ message KubeResponse {
   string  node_name = 4;
 }
 
-
 message DelayRequest {
     int32 duration = 1;
 }
@@ -36,7 +78,6 @@ message DelayRequest {
 message EnvRequest {
     string env_var = 1;
 }
-
 
 message HeadersRequest {
     map<string, string> headers = 1;
@@ -51,16 +92,4 @@ message ProxyRequest {
 
 message AWSRequest {
     string path = 1;
-}
-
-
-// The echo infrabin service replies with the message it received.
-service Infrabin {
-  rpc Root(Empty) returns (Response) {}
-  rpc Delay(DelayRequest) returns (Response) {}
-  rpc Liveness(Empty) returns (Response) {}
-  rpc Env(EnvRequest) returns (Response) {}
-  rpc Headers(HeadersRequest) returns (Response) {}
-  rpc Proxy(ProxyRequest) returns (google.protobuf.Struct) {}
-  rpc AWS(AWSRequest) returns (google.protobuf.Struct) {}
 }

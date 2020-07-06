@@ -2,71 +2,12 @@ package infrabin
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/structpb"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
-
-type GRPCHandlerFunc func(ctx context.Context, request interface{}) (proto.Message, error)
-type RequestBuilder func(*http.Request) (proto.Message, error)
-
-//func(context.Content, interface{}) (interface{}, error)
-func MakeHandler(grpcHandler GRPCHandlerFunc, requestBuilder RequestBuilder) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		var (
-			response proto.Message
-			err      error
-		)
-		request, err := requestBuilder(r)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			response = &Response{Error: fmt.Sprintf("Failed to build request: %v", err)}
-		} else {
-			response, err = grpcHandler(r.Context(), request)
-			if err != nil {
-				log.Printf("Error from grpcHandler: %v", err)
-				w.WriteHeader(http.StatusServiceUnavailable)
-				// If the response is of Type Response we can add Error
-				if resp, ok := response.(*Response); ok {
-					if resp == nil {
-						resp = &Response{}
-					}
-					resp.Error = fmt.Sprintf("Error from grpcHandler: %v", err)
-					response = resp
-				}
-				// If the response is of Type Struct we can add Error
-				if resp, ok := response.(*structpb.Struct); ok {
-					if resp == nil {
-						resp = &structpb.Struct{Fields: make(map[string]*structpb.Value)}
-					}
-					resp.Fields["error"] = structpb.NewStringValue(
-						fmt.Sprintf("Error from grpcHandler: %v", err),
-					)
-					response = resp
-				}
-			} else {
-				w.WriteHeader(http.StatusOK)
-			}
-		}
-
-		marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
-		data, _ := marshalOptions.Marshal(response)
-		_, err = io.WriteString(w, string(data))
-		if err != nil {
-			log.Fatal("error writing to ResponseWriter: ", err)
-		}
-	}
-}
 
 type HTTPServer struct {
 	Name   string
@@ -93,80 +34,50 @@ func (s *HTTPServer) Shutdown() {
 	}
 }
 
-func NewHTTPServer(config *Config) *HTTPServer {
-	r := mux.NewRouter()
-	is := InfrabinService{config}
+func NewHTTPServer(name string, addr string, config *Config) *HTTPServer {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	r.HandleFunc("/", MakeHandler(
-		func(ctx context.Context, req interface{}) (proto.Message, error) {
-			return is.Root(ctx, req.(*Empty))
-		},
-		BuildEmpty,
-	)).Name("Root")
+	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(passThroughHeaderMatcher))
 
-	r.HandleFunc("/delay/{seconds}", MakeHandler(
-		func(ctx context.Context, req interface{}) (proto.Message, error) {
-			return is.Delay(ctx, req.(*DelayRequest))
-		},
-		BuildDelayRequest,
-	)).Name("Delay")
+	// Set default marshaller options
+	marshaler, _ := runtime.MarshalerForRequest(mux, &http.Request{})
+	jsonMarshaler := marshaler.(*runtime.HTTPBodyMarshaler).Marshaler.(*runtime.JSONPb)
+	jsonMarshaler.EmitUnpopulated = false
+	jsonMarshaler.UseProtoNames = true
 
-	r.HandleFunc("/env/{env_var}", MakeHandler(
-		func(ctx context.Context, req interface{}) (proto.Message, error) {
-			return is.Env(ctx, req.(*EnvRequest))
-		},
-		BuildEnvRequest,
-	)).Name("Env")
+	// Register the handler to call local instance, i.e. no network calls
+	is := InfrabinService{Config: config}
+	err := RegisterInfrabinHandlerServer(ctx, mux, &is)
+	if err != nil {
+		log.Fatalf("gRPC server failed to register: %v", err)
+	}
 
-	r.HandleFunc("/headers", MakeHandler(
-		func(ctx context.Context, request interface{}) (proto.Message, error) {
-			return is.Headers(ctx, request.(*HeadersRequest))
-		},
-		BuildHeadersRequest,
-	)).Name("Headers")
-
-	r.HandleFunc("/proxy", MakeHandler(
-		func(ctx context.Context, request interface{}) (proto.Message, error) {
-			return is.Proxy(ctx, request.(*ProxyRequest))
-		},
-		BuildProxyRequest,
-	)).Methods("POST").Name("Proxy")
-
-	r.HandleFunc("/aws/{path}", MakeHandler(
-		func(ctx context.Context, request interface{}) (proto.Message, error) {
-			return is.AWS(ctx, request.(*AWSRequest))
-		},
-		BuildAWSRequest,
-	)).Name("AWS")
-
+	// A standard http.Server
 	server := &http.Server{
-		Handler: r,
-		Addr:    "0.0.0.0:8888",
+		Handler: mux,
+		Addr: addr,
 		// Good practice: enforce timeouts
 		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		ReadTimeout: 15 * time.Second,
+		IdleTimeout: 30 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
 	}
-	return &HTTPServer{Name: "service", Config: config, Server: server}
+	return &HTTPServer{Name: name, Config: config, Server: server}
 }
 
-func NewAdminServer(config *Config) *HTTPServer {
-	r := mux.NewRouter()
-	is := InfrabinService{}
-
-	r.HandleFunc("/liveness", MakeHandler(
-		func(ctx context.Context, req interface{}) (proto.Message, error) {
-			return is.Liveness(ctx, req.(*Empty))
-		},
-		BuildEmpty,
-	)).Name("Liveness")
-
-	server := &http.Server{
-		Handler: r,
-		Addr:    "0.0.0.0:8899",
-		// Good practice: enforce timeouts
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+// Keep the standard "Grpc-Metadata-" and well known behaviour
+// All other headers are passed, also with grpcgateway- prefix
+func passThroughHeaderMatcher(key string) (string, bool) {
+	if grpcKey, ok := runtime.DefaultHeaderMatcher(key); ok {
+		return grpcKey, ok
+	} else {
+		return runtime.MetadataPrefix + key, true
 	}
+}
 
-	return &HTTPServer{Name: "admin", Config: config, Server: server}
+// Workaround for not being able to specify root as a path
+// See https://github.com/grpc-ecosystem/grpc-gateway/issues/1500
+func init() {
+	pattern_Infrabin_Root_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{""}, ""))
 }

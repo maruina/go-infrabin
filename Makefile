@@ -13,7 +13,8 @@ test-ci:
 	${HOME}/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken ${COVERALLS_TOKEN}
 
 protoc:
-	protoc --proto_path=proto/ --go_out=plugins=grpc:pkg/infrabin --go_opt=paths=source_relative proto/infrabin.proto
+	protoc --proto_path=proto/ --go_out=pkg/infrabin --go_opt=paths=source_relative --go-grpc_out=pkg/infrabin --go-grpc_opt=paths=source_relative proto/infrabin.proto
+	protoc --proto_path=proto/ --grpc-gateway_out=logtostderr=true,paths=source_relative:pkg/infrabin proto/infrabin.proto
 
 build: protoc
 	go build -o $(BINARY_NAME) cmd/$(BINARY_NAME)/main.go

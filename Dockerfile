@@ -6,13 +6,19 @@ RUN apt-get update && \
     unzip protoc/protoc.zip -d protoc/ && \
     mv protoc/bin/protoc /usr/local/bin/ && \
     mv protoc/include /usr/local && \
-    go get github.com/golang/protobuf/protoc-gen-go && \
     curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
 RUN wget -O /envoy-preflight https://github.com/monzo/envoy-preflight/releases/download/v1.0/envoy-preflight && \
     chmod +x /envoy-preflight
 WORKDIR /go/src/go-infrabin
 COPY . /go/src/go-infrabin
-RUN make build && make test
+RUN go mod tidy && \
+    go install \
+        github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
+        github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
+        google.golang.org/protobuf/cmd/protoc-gen-go \
+        google.golang.org/grpc/cmd/protoc-gen-go-grpc && \
+    make build && \
+    make test
 
 
 FROM gcr.io/distroless/base-debian10

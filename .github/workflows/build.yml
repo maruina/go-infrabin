@@ -7,7 +7,6 @@ on:
   pull_request:
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -25,14 +24,14 @@ jobs:
     - name: Install Protoc
       uses: arduino/setup-protoc@master
 
-    - name: Get dependencies
+    - name: Get protoc go binaries
       run: |
-        go get -u github.com/golang/protobuf/protoc-gen-go
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
+        go mod tidy
+        go install \
+          github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
+          github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
+          google.golang.org/protobuf/cmd/protoc-gen-go \
+          google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
     - name: Genereate code for infrabin protofile
       run: make protoc
@@ -52,7 +51,7 @@ jobs:
       uses: shogo82148/actions-goveralls@v1
       with:
         path-to-profile: coverage.out
-        ignore: pkg/infrabin/infrabin.pb.go
+        ignore: pkg/infrabin/infrabin.pb.go,pkg/infrabin/infrabin.pb.gw.go,pkg/infrabin/infrabin_grpc.pb.go
 
     - name: Build docker image on PR
       uses: docker/build-push-action@v1
