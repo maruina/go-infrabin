@@ -21,6 +21,7 @@ import (
 	"github.com/maruina/go-infrabin/internal/helpers"
 )
 
+// Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
 type InfrabinService struct{
 	UnimplementedInfrabinServer
 	Config *Config

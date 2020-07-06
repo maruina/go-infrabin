@@ -76,6 +76,8 @@ func passThroughHeaderMatcher(key string) (string, bool) {
 	}
 }
 
+// Workaround for not being able to specify root as a path
+// See https://github.com/grpc-ecosystem/grpc-gateway/issues/1500
 func init() {
 	pattern_Infrabin_Root_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{""}, ""))
 }
