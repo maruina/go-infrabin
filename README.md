@@ -105,7 +105,7 @@ See the [README](./chart/go-infrabin/README.md).
         }
         ```
     * _returns_:
-        json of proxied request
+        JSON of proxied request
 
 * _grpc_: `infrabin.Infrabin.AWS` _rest_: `GET /aws/<path>`
     * _NOTE_: `--enable-proxy-endpoint` must be set
@@ -116,7 +116,7 @@ See the [README](./chart/go-infrabin/README.md).
         }
         ```
     * _returns_:
-        json of AWS GET call
+        JSON of AWS GET call
 
 
 ## Admin Endpoints
