@@ -18,6 +18,11 @@ jobs:
         go-version: ^1.14
       id: go
 
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: go
+
     - name: Check out code
       uses: actions/checkout@v2
 
@@ -45,6 +50,9 @@ jobs:
 
     - name: Build
       run: go build -v cmd/go-infrabin/main.go
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
 
     - name: Test
       run: go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
