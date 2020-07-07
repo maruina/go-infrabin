@@ -118,10 +118,9 @@ See the [README](./chart/go-infrabin/README.md).
     * _returns_:
         JSON of AWS GET call
 
-
 ## Admin Endpoints
 
-* `GET /liveness`
+* _grpc_: `infrabin.Infrabin.Liveness` _rest_: `GET /liveness`
     * _grpc request_
         ```
         message Empty {}
@@ -145,19 +144,22 @@ have the following format:
     }
     ```
 
-
 ### Contributing
 
 To build locally, ensure you have compiled the protocol schemas. You
 will need the `protoc` binary which can install by following
-[these instructions][protoc].
+[these instructions][protoc] or if using Homebrew
+
+```shell
+brew install protobuf
+```
 
 You will also need to protoc go plugins for protofuf, grpc, and
 grpc-gateway. `go mod tidy` will fetch the versions specified in
 `go.mod`, and `go install` will install that version.
 
 ```shell
-go mod tidy
+go get -t -v -d ./...
 go install \
   github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
   github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \

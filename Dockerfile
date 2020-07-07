@@ -11,7 +11,7 @@ RUN wget -O /envoy-preflight https://github.com/monzo/envoy-preflight/releases/d
     chmod +x /envoy-preflight
 WORKDIR /go/src/go-infrabin
 COPY . /go/src/go-infrabin
-RUN go mod tidy && \
+RUN go get -t -v -d ./... && \
     go install \
         github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
         github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
