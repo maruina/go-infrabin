@@ -27,9 +27,11 @@ jobs:
     - name: Install Protoc
       uses: arduino/setup-protoc@master
 
+    - name: Get dependencies
+      run: go get -t -v -d ./...
+
     - name: Get protoc go binaries
       run: |
-        go mod tidy
         go install \
           github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
           github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
