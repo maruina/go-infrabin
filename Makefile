@@ -15,6 +15,7 @@ test-ci:
 protoc:
 	protoc --proto_path=proto/ --go_out=pkg/infrabin --go_opt=paths=source_relative --go-grpc_out=pkg/infrabin --go-grpc_opt=paths=source_relative proto/infrabin.proto
 	protoc --proto_path=proto/ --grpc-gateway_out=logtostderr=true,paths=source_relative:pkg/infrabin proto/infrabin.proto
+	go mod tidy
 
 build: protoc
 	go build -o $(BINARY_NAME) cmd/$(BINARY_NAME)/main.go
