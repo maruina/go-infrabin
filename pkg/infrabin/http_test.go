@@ -322,3 +322,18 @@ func TestAWSHandler(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want {}", rr.Body.String())
 	}
 }
+
+func TestPromHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/metrics", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := NewPromServer("test", "", DefaultConfig()).Server.Handler
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}

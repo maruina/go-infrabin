@@ -38,10 +38,15 @@ func main() {
 	grpcServer := infrabin.NewGRPCServer(config)
 	go grpcServer.ListenAndServe()
 
+	// run Prometheus server
+	promServer := infrabin.NewPromServer("prom", "0.0.0.0:8877", config)
+	go promServer.ListenAndServe()
+
 	// wait for SIGINT
 	<-finish
 
 	admin.Shutdown()
 	server.Shutdown()
 	grpcServer.Shutdown()
+	promServer.Shutdown()
 }
