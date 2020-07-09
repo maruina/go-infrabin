@@ -6,13 +6,45 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/maruina/go-infrabin/pkg/grpc/health/v1"
+	"google.golang.org/grpc/health"
+
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+type HTTPServerOption func(ctx context.Context, s *HTTPServer)
+
+func RegisterHealth(healthService *health.Server) HTTPServerOption {
+	return func(ctx context.Context, s *HTTPServer) {
+		// Register the handler to call local instance, i.e. no network calls
+		err := grpc_health_v1.RegisterHealthHandlerServer(
+			ctx,
+			s.Server.Handler.(*runtime.ServeMux),
+			healthService,
+		)
+		if err != nil {
+			log.Fatalf("gRPC server failed to register: %v", err)
+		}
+	}
+}
+
+func RegisterInfrabin(infrabinService InfrabinServer) HTTPServerOption {
+	return func(ctx context.Context, s *HTTPServer) {
+		// Register the handler to call local instance, i.e. no network calls
+		err := RegisterInfrabinHandlerServer(
+			ctx,
+			s.Server.Handler.(*runtime.ServeMux),
+			infrabinService,
+		)
+		if err != nil {
+			log.Fatalf("gRPC server failed to register: %v", err)
+		}
+	}
+}
+
 type HTTPServer struct {
 	Name   string
-	Config *Config
 	Server *http.Server
 }
 
@@ -35,11 +67,13 @@ func (s *HTTPServer) Shutdown() {
 	}
 }
 
-func NewHTTPServer(name string, addr string, config *Config) *HTTPServer {
+func NewHTTPServer(name string, addr string, opts ...HTTPServerOption) *HTTPServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(passThroughHeaderMatcher))
+	mux := runtime.NewServeMux(
+		runtime.WithIncomingHeaderMatcher(passThroughHeaderMatcher),
+	)
 
 	// Set default marshaller options
 	marshaler, _ := runtime.MarshalerForRequest(mux, &http.Request{})
@@ -47,24 +81,22 @@ func NewHTTPServer(name string, addr string, config *Config) *HTTPServer {
 	jsonMarshaler.EmitUnpopulated = false
 	jsonMarshaler.UseProtoNames = true
 
-	// Register the handler to call local instance, i.e. no network calls
-	is := InfrabinService{Config: config}
-	err := RegisterInfrabinHandlerServer(ctx, mux, &is)
-	if err != nil {
-		log.Fatalf("gRPC server failed to register: %v", err)
-	}
-
 	// A standard http.Server
 	server := &http.Server{
 		Handler: mux,
-		Addr: addr,
+		Addr:    addr,
 		// Good practice: enforce timeouts
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout: 15 * time.Second,
-		IdleTimeout: 30 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		IdleTimeout:       30 * time.Second,
 		ReadHeaderTimeout: 2 * time.Second,
 	}
-	return &HTTPServer{Name: name, Config: config, Server: server}
+
+	s := &HTTPServer{Name: name, Server: server}
+	for _, opt := range opts {
+		opt(ctx, s)
+	}
+	return s
 }
 
 // NewPromServer creates a new HTTP server with a Prometheus handler
@@ -80,7 +112,7 @@ func NewPromServer(name string, addr string, config *Config) *HTTPServer {
 		IdleTimeout: 30 * time.Second,
 		ReadHeaderTimeout: 2 * time.Second,
 	}
-	return &HTTPServer{Name: name, Config: config, Server: promServer}
+	return &HTTPServer{Name: name, Server: promServer}
 }
 
 // Keep the standard "Grpc-Metadata-" and well known behaviour

@@ -4,6 +4,7 @@ package infrabin;
 
 import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
+// import "grpc/health/v1/health.proto";
 
 option go_package = "github.com/maruina/go-infrabin/pkg/infrabin;infrabin";
 
@@ -49,6 +50,14 @@ service Infrabin {
         };
     }
 }
+
+//service grpc.health.v1.Health {
+//  rpc Check(grpc.health.v1.HealthCheckRequest) returns (grpc.health.v1.HealthCheckResponse) {
+//    option (google.api.http) = {
+//      get: "/liveness"
+//    };
+//  };
+//}
 
 
 // Empty is the null value for parameters.

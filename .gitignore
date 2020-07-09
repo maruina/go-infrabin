@@ -23,3 +23,4 @@ go-infrabin
 pkg/infrabin/infrabin.pb.go
 pkg/infrabin/infrabin.pb.gw.go
 pkg/infrabin/infrabin_grpc.pb.go
+pkg/grpc/health/v1/health.pb.gw.go

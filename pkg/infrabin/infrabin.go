@@ -22,7 +22,7 @@ import (
 )
 
 // Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
-type InfrabinService struct{
+type InfrabinService struct {
 	UnimplementedInfrabinServer
 	Config *Config
 }

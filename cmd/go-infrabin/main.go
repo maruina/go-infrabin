@@ -26,17 +26,25 @@ func main() {
 	)
 	flag.Parse()
 
-	// run service server in background
-	server := infrabin.NewHTTPServer("server", "0.0.0.0:8888", config)
-	go server.ListenAndServe()
-
-	// run admin server in background
-	admin := infrabin.NewHTTPServer("admin", "0.0.0.0:8899", config)
-	go admin.ListenAndServe()
-
 	// run grpc server in background
 	grpcServer := infrabin.NewGRPCServer(config)
 	go grpcServer.ListenAndServe()
+
+	// run service server in background
+	server := infrabin.NewHTTPServer(
+		"server",
+		"0.0.0.0:8888",
+		infrabin.RegisterInfrabin(grpcServer.InfrabinService),
+	)
+	go server.ListenAndServe()
+
+	// run admin server in background
+	admin := infrabin.NewHTTPServer(
+		"admin",
+		"0.0.0.0:8899",
+		infrabin.RegisterHealth(grpcServer.HealthService),
+	)
+	go admin.ListenAndServe()
 
 	// run Prometheus server
 	promServer := infrabin.NewPromServer("prom", "0.0.0.0:8877", config)

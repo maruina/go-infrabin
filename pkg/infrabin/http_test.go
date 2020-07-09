@@ -3,14 +3,15 @@ package infrabin
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/maruina/go-infrabin/internal/helpers"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/maruina/go-infrabin/internal/helpers"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -188,9 +189,9 @@ func TestHeadersHandler(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("X-Request-Id", "Test-Header")  // Custom header
-	req.Header.Set("Accept", "*/*")  // Well known header
-	req.Header.Set("Grpc-Metadata-Foo", "bar")  // gRPC metadata
+	req.Header.Set("X-Request-Id", "Test-Header") // Custom header
+	req.Header.Set("Accept", "*/*")               // Well known header
+	req.Header.Set("Grpc-Metadata-Foo", "bar")    // gRPC metadata
 
 	rr := httptest.NewRecorder()
 	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
@@ -202,8 +203,8 @@ func TestHeadersHandler(t *testing.T) {
 
 	expected := Response{Headers: map[string]string{
 		"grpcgateway-x-request-id": "Test-Header",
-		"grpcgateway-accept": "*/*",
-		"foo": "bar",
+		"grpcgateway-accept":       "*/*",
+		"foo":                      "bar",
 	}}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	data, _ := marshalOptions.Marshal(&expected)
@@ -268,10 +269,10 @@ func TestProxyHandler(t *testing.T) {
 	defer mockServer.Close()
 
 	body, err := json.Marshal(map[string]interface{}{
-		"method": "POST",
-		"url": mockServer.URL,
+		"method":  "POST",
+		"url":     mockServer.URL,
 		"headers": map[string]string{"Accept": "*/*"},
-		"body": map[string]string{},
+		"body":    map[string]string{},
 	})
 	if err != nil {
 		t.Fatalf("Failed to make request body: %v", err)
@@ -283,7 +284,7 @@ func TestProxyHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "",  &Config{EnableProxyEndpoint: true}).Server.Handler
+	handler := NewHTTPServer("test", "", &Config{EnableProxyEndpoint: true}).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -312,7 +313,7 @@ func TestAWSHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "",  config).Server.Handler
+	handler := NewHTTPServer("test", "", config).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
