@@ -23,9 +23,8 @@ protoc:
 		--proto_path=proto/ \
 		--grpc-gateway_out=logtostderr=true,paths=source_relative,standalone=true:pkg \
 		proto/grpc/health/v1/health.proto
-	ls -R pkg
 	sed \
-		-i '' \
+		-i.bak \
 		-e 's/PopulateQueryParameters(&protoReq/PopulateQueryParameters(protov1.MessageV2(\&protoReq)/g' \
 		-e 's/msg, metadata, err/protov1.MessageV2(msg), metadata, err/g' \
 		pkg/grpc/health/v1/health.pb.gw.go
