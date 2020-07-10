@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type HTTPServer struct {
@@ -64,6 +65,22 @@ func NewHTTPServer(name string, addr string, config *Config) *HTTPServer {
 		ReadHeaderTimeout: 2 * time.Second,
 	}
 	return &HTTPServer{Name: name, Config: config, Server: server}
+}
+
+// NewPromServer creates a new HTTP server with a Prometheus handler
+func NewPromServer(name string, addr string, config *Config) *HTTPServer {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	promServer := &http.Server{
+		Addr: addr,
+		Handler: mux,
+		// Good practice: enforce timeouts
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout: 15 * time.Second,
+		IdleTimeout: 30 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
+	}
+	return &HTTPServer{Name: name, Config: config, Server: promServer}
 }
 
 // Keep the standard "Grpc-Metadata-" and well known behaviour

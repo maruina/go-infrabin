@@ -6,6 +6,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 )
 
 // Server wraps the gRPC server and implements infrabin.Infrabin
@@ -36,10 +37,14 @@ func (s *GRPCServer) Shutdown() {
 
 // New creates a new rpc server.
 func NewGRPCServer(config *Config) *GRPCServer {
-	gs := grpc.NewServer()
+	gs := grpc.NewServer(
+		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+		)
 	s := &GRPCServer{Name: "grpc", Config: config, Server: gs}
 	is := &InfrabinService{Config: config}
 	RegisterInfrabinServer(gs, is)
 	reflection.Register(gs)
+	grpc_prometheus.Register(gs)
 	return s
 }
