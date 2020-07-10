@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/runtime/protoimpl"
@@ -20,6 +22,23 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+func newHTTPInfrabinHandler() http.Handler {
+	return NewHTTPServer(
+		"test",
+		"",
+		RegisterInfrabin("/", &InfrabinService{}),
+	).Server.Handler
+}
+
+func newHTTPAdminHandler() http.Handler {
+	return NewHTTPServer(
+		"test-admin",
+		"",
+		RegisterHealth("/healthcheck/liveness/", health.NewServer()),
+		RegisterHealth("/healthcheck/readiness/", health.NewServer()),
+	).Server.Handler
+}
+
 func TestRootHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
@@ -27,7 +46,7 @@ func TestRootHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -63,7 +82,7 @@ func TestFailRootHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusServiceUnavailable {
@@ -91,7 +110,7 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -125,7 +144,7 @@ func TestDelayHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -147,7 +166,7 @@ func TestDelayHandlerBadRequest(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
@@ -175,7 +194,7 @@ func TestHeadersHandler(t *testing.T) {
 	req.Header.Set("Grpc-Metadata-Foo", "bar")    // gRPC metadata
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 
 	if s := rr.Code; s != http.StatusOK {
@@ -205,7 +224,7 @@ func TestEnvHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -228,7 +247,7 @@ func TestEnvHandlerNotFound(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
@@ -266,7 +285,7 @@ func TestProxyHandler(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	is := &InfrabinService{Config: &Config{EnableProxyEndpoint: true}}
-	handler := NewHTTPServer("test", "", RegisterInfrabin(is)).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin("/", is)).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -295,7 +314,7 @@ func TestAWSHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin(is)).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin("/", is)).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -307,13 +326,13 @@ func TestAWSHandler(t *testing.T) {
 }
 
 func TestHealthHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/health", nil)
+	req, err := http.NewRequest("GET", "/healthcheck/liveness/check", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test-admin", "", RegisterHealth(health.NewServer())).Server.Handler
+	handler := newHTTPAdminHandler()
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -336,7 +355,11 @@ func TestPromHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewPromServer("test", "", DefaultConfig()).Server.Handler
+	handler := NewHTTPServer(
+		"test-prom",
+		"",
+		RegisterHandler("/", promhttp.Handler()),
+	).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {

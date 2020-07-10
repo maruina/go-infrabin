@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/maruina/go-infrabin/pkg/infrabin"
 )
 
@@ -34,7 +36,7 @@ func main() {
 	server := infrabin.NewHTTPServer(
 		"server",
 		"0.0.0.0:8888",
-		infrabin.RegisterInfrabin(grpcServer.InfrabinService),
+		infrabin.RegisterInfrabin("/", grpcServer.InfrabinService),
 	)
 	go server.ListenAndServe()
 
@@ -42,12 +44,17 @@ func main() {
 	admin := infrabin.NewHTTPServer(
 		"admin",
 		"0.0.0.0:8899",
-		infrabin.RegisterHealth(grpcServer.HealthService),
+		infrabin.RegisterHealth("/healthcheck/liveness/", grpcServer.HealthService),
+		infrabin.RegisterHealth("/healthcheck/readiness/", grpcServer.HealthService),
 	)
 	go admin.ListenAndServe()
 
 	// run Prometheus server
-	promServer := infrabin.NewPromServer("prom", "0.0.0.0:8877", config)
+	promServer := infrabin.NewHTTPServer(
+		"prom",
+		"0.0.0.0:8877",
+		infrabin.RegisterHandler("/", promhttp.Handler()),
+	)
 	go promServer.ListenAndServe()
 
 	// wait for SIGINT

@@ -46,7 +46,7 @@ service Health {
   // NOT_FOUND.
   rpc Check(HealthCheckRequest) returns (HealthCheckResponse) {
     option (google.api.http) = {
-        get: "/health"
+        get: "/check"
     };
   };
 

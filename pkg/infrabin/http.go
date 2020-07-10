@@ -4,42 +4,57 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	grpc_health_v1 "github.com/maruina/go-infrabin/pkg/grpc/health/v1"
 	"google.golang.org/grpc/health"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type HTTPServerOption func(ctx context.Context, s *HTTPServer)
 
-func RegisterHealth(healthService *health.Server) HTTPServerOption {
+func RegisterHealth(pattern string, healthService *health.Server) HTTPServerOption {
 	return func(ctx context.Context, s *HTTPServer) {
 		// Register the handler to call local instance, i.e. no network calls
-		err := grpc_health_v1.RegisterHealthHandlerServer(
-			ctx,
-			s.Server.Handler.(*runtime.ServeMux),
-			healthService,
-		)
-		if err != nil {
+		mux := newGatewayMux()
+		if err := grpc_health_v1.RegisterHealthHandlerServer(ctx, mux, healthService); err != nil {
 			log.Fatalf("gRPC server failed to register: %v", err)
 		}
+		var handler http.Handler
+		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
+			handler = http.StripPrefix(p, mux)
+		} else {
+			handler = mux
+		}
+		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
 	}
 }
 
-func RegisterInfrabin(infrabinService InfrabinServer) HTTPServerOption {
+func RegisterInfrabin(pattern string, infrabinService InfrabinServer) HTTPServerOption {
 	return func(ctx context.Context, s *HTTPServer) {
 		// Register the handler to call local instance, i.e. no network calls
-		err := RegisterInfrabinHandlerServer(
-			ctx,
-			s.Server.Handler.(*runtime.ServeMux),
-			infrabinService,
-		)
-		if err != nil {
+		mux := newGatewayMux()
+		if err := RegisterInfrabinHandlerServer(ctx, mux, infrabinService); err != nil {
 			log.Fatalf("gRPC server failed to register: %v", err)
 		}
+		var handler http.Handler
+		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
+			handler = http.StripPrefix(p, mux)
+		} else {
+			handler = mux
+		}
+		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
+	}
+}
+
+func RegisterHandler(pattern string, handler http.Handler) HTTPServerOption {
+	return func(ctx context.Context, s *HTTPServer) {
+		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
+			handler = http.StripPrefix(p, handler)
+		}
+		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
 	}
 }
 
@@ -71,19 +86,9 @@ func NewHTTPServer(name string, addr string, opts ...HTTPServerOption) *HTTPServ
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mux := runtime.NewServeMux(
-		runtime.WithIncomingHeaderMatcher(passThroughHeaderMatcher),
-	)
-
-	// Set default marshaller options
-	marshaler, _ := runtime.MarshalerForRequest(mux, &http.Request{})
-	jsonMarshaler := marshaler.(*runtime.HTTPBodyMarshaler).Marshaler.(*runtime.JSONPb)
-	jsonMarshaler.EmitUnpopulated = false
-	jsonMarshaler.UseProtoNames = true
-
 	// A standard http.Server
 	server := &http.Server{
-		Handler: mux,
+		Handler: http.NewServeMux(),
 		Addr:    addr,
 		// Good practice: enforce timeouts
 		WriteTimeout:      15 * time.Second,
@@ -99,20 +104,16 @@ func NewHTTPServer(name string, addr string, opts ...HTTPServerOption) *HTTPServ
 	return s
 }
 
-// NewPromServer creates a new HTTP server with a Prometheus handler
-func NewPromServer(name string, addr string, config *Config) *HTTPServer {
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-	promServer := &http.Server{
-		Addr:    addr,
-		Handler: mux,
-		// Good practice: enforce timeouts
-		WriteTimeout:      15 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		IdleTimeout:       30 * time.Second,
-		ReadHeaderTimeout: 2 * time.Second,
-	}
-	return &HTTPServer{Name: name, Server: promServer}
+func newGatewayMux() *runtime.ServeMux {
+	mux := runtime.NewServeMux(
+		runtime.WithIncomingHeaderMatcher(passThroughHeaderMatcher),
+	)
+	// Set default marshaller options
+	marshaler, _ := runtime.MarshalerForRequest(mux, &http.Request{})
+	jsonMarshaler := marshaler.(*runtime.HTTPBodyMarshaler).Marshaler.(*runtime.JSONPb)
+	jsonMarshaler.EmitUnpopulated = false
+	jsonMarshaler.UseProtoNames = true
+	return mux
 }
 
 // Keep the standard "Grpc-Metadata-" and well known behaviour
