@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/maruina/go-infrabin/pkg/grpc/health/v1"
+	grpc_health_v1 "github.com/maruina/go-infrabin/pkg/grpc/health/v1"
 	"google.golang.org/grpc/health"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"

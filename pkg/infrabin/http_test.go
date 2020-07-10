@@ -3,14 +3,15 @@ package infrabin
 import (
 	"bytes"
 	"encoding/json"
-	"google.golang.org/grpc/health"
-	"google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/protobuf/runtime/protoimpl"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
+
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/protobuf/runtime/protoimpl"
 
 	"github.com/maruina/go-infrabin/internal/helpers"
 	"google.golang.org/grpc/codes"
