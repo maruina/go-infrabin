@@ -62,10 +62,6 @@ func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Re
 	return &Response{Delay: int32(seconds)}, nil
 }
 
-func (s *InfrabinService) Liveness(ctx context.Context, _ *Empty) (*Response, error) {
-	return &Response{Liveness: "pass"}, nil
-}
-
 func (s *InfrabinService) Env(ctx context.Context, request *EnvRequest) (*Response, error) {
 	value := helpers.GetEnv(request.EnvVar, "")
 	if value == "" {

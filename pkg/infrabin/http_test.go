@@ -3,6 +3,9 @@ package infrabin
 import (
 	"bytes"
 	"encoding/json"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/protobuf/runtime/protoimpl"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -23,7 +26,7 @@ func TestRootHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -59,7 +62,7 @@ func TestFailRootHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusServiceUnavailable {
@@ -87,7 +90,7 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -114,29 +117,6 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	}
 }
 
-func TestLivenessHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/liveness", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
-
-	expected := Response{Liveness: "pass"}
-	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
-	data, _ := marshalOptions.Marshal(&expected)
-
-	if rr.Body.String() != string(data) {
-		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), string(data))
-	}
-}
-
 func TestDelayHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/delay/1", nil)
 	if err != nil {
@@ -144,7 +124,7 @@ func TestDelayHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
@@ -166,7 +146,7 @@ func TestDelayHandlerBadRequest(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
@@ -194,7 +174,7 @@ func TestHeadersHandler(t *testing.T) {
 	req.Header.Set("Grpc-Metadata-Foo", "bar")    // gRPC metadata
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if s := rr.Code; s != http.StatusOK {
@@ -224,7 +204,7 @@ func TestEnvHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -247,7 +227,7 @@ func TestEnvHandlerNotFound(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", DefaultConfig()).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin(&InfrabinService{})).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusNotFound {
@@ -284,7 +264,8 @@ func TestProxyHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", &Config{EnableProxyEndpoint: true}).Server.Handler
+	is := &InfrabinService{Config: &Config{EnableProxyEndpoint: true}}
+	handler := NewHTTPServer("test", "", RegisterInfrabin(is)).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -306,14 +287,14 @@ func TestAWSHandler(t *testing.T) {
 		EnableProxyEndpoint: true,
 		AWSMetadataEndpoint: mockServer.URL,
 	}
-
+	is := &InfrabinService{Config: config}
 	req, err := http.NewRequest("GET", "/aws/foo", nil)
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", config).Server.Handler
+	handler := NewHTTPServer("test", "", RegisterInfrabin(is)).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -321,6 +302,29 @@ func TestAWSHandler(t *testing.T) {
 	}
 	if !reflect.DeepEqual(rr.Body.String(), "{}") {
 		t.Errorf("handler returned unexpected body: got %v want {}", rr.Body.String())
+	}
+}
+
+func TestHealthHandler(t *testing.T) {
+	req, err := http.NewRequest("GET", "/health", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := NewHTTPServer("test-admin", "", RegisterHealth(health.NewServer())).Server.Handler
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	expected := grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}
+	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
+	data, _ := marshalOptions.Marshal(protoimpl.X.ProtoMessageV2Of(&expected))
+
+	if rr.Body.String() != string(data) {
+		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), string(data))
 	}
 }
 

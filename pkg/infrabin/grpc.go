@@ -4,11 +4,11 @@ import (
 	"log"
 	"net"
 
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
-	"github.com/grpc-ecosystem/go-grpc-prometheus"
 )
 
 // Server wraps the gRPC server and implements infrabin.Infrabin

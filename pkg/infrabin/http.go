@@ -104,12 +104,12 @@ func NewPromServer(name string, addr string, config *Config) *HTTPServer {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	promServer := &http.Server{
-		Addr: addr,
+		Addr:    addr,
 		Handler: mux,
 		// Good practice: enforce timeouts
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout: 15 * time.Second,
-		IdleTimeout: 30 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		IdleTimeout:       30 * time.Second,
 		ReadHeaderTimeout: 2 * time.Second,
 	}
 	return &HTTPServer{Name: name, Server: promServer}
