@@ -23,6 +23,7 @@ protoc:
 		--proto_path=proto/ \
 		--grpc-gateway_out=logtostderr=true,paths=source_relative,standalone=true:pkg \
 		proto/grpc/health/v1/health.proto
+	ls -R pkg
 	sed \
 		-i '' \
 		-e 's/PopulateQueryParameters(&protoReq/PopulateQueryParameters(protov1.MessageV2(\&protoReq)/g' \
