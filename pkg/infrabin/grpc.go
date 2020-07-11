@@ -73,7 +73,10 @@ func NewGRPCServer() *GRPCServer {
 
 	// Create the gPRC services
 	healthServer := health.NewServer()
-	infrabinService := &InfrabinService{}
+	infrabinService := &InfrabinService{
+		LivenessHealthService:  healthServer,
+		ReadinessHealthService: healthServer,
+	}
 
 	// Register gRPC services on the grpc server
 	RegisterInfrabinServer(gs, infrabinService)
