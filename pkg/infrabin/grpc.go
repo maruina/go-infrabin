@@ -1,8 +1,10 @@
 package infrabin
 
 import (
+	"context"
 	"log"
 	"net"
+	"time"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/spf13/viper"
@@ -36,11 +38,27 @@ func (s *GRPCServer) ListenAndServe() {
 }
 
 func (s *GRPCServer) Shutdown() {
-	log.Printf("Set all serving status to NOT_SERVING")
-	s.HealthService.Shutdown()
-	log.Printf("Shutting down %s server with GracefulStop()", s.Name)
-	s.Server.GracefulStop()
-	log.Printf("gRPC %s server stopped", s.Name)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	gracefulDone := make(chan struct{}, 1)
+
+	go func() {
+		log.Printf("Set all serving status to NOT_SERVING")
+		s.HealthService.Shutdown()
+		log.Printf("Shutting down %s server with GracefulStop()", s.Name)
+		s.Server.GracefulStop()
+		log.Printf("gRPC %s server stopped", s.Name)
+		gracefulDone <- struct{}{}
+	}()
+
+	select {
+	case <-gracefulDone:
+		return
+	case <-ctx.Done():
+		log.Printf("Shutting down %s server with Stop() as it took too long", s.Name)
+		s.Server.Stop()
+		return
+	}
 }
 
 // New creates a new rpc server.
@@ -52,7 +70,10 @@ func NewGRPCServer() *GRPCServer {
 
 	// Create the gPRC services
 	healthServer := health.NewServer()
-	infrabinService := &InfrabinService{}
+	infrabinService := &InfrabinService{
+		LivenessHealthService:  healthServer,
+		ReadinessHealthService: healthServer,
+	}
 
 	// Register gRPC services on the grpc server
 	RegisterInfrabinServer(gs, infrabinService)
