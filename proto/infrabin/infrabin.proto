@@ -5,7 +5,7 @@ package infrabin;
 import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
 
-option go_package = "github.com/maruina/go-infrabin/pkg/infrabin;infrabin";
+option go_package = "github.com/maruina/go-infrabin/pkg/infrabin";
 
 
 // The echo infrabin service replies with the message it received.
@@ -14,11 +14,6 @@ service Infrabin {
     rpc Delay(DelayRequest) returns (Response) {
         option (google.api.http) = {
             get: "/delay/{duration}"
-        };
-    }
-    rpc Liveness(Empty) returns (Response) {
-        option (google.api.http) = {
-            get: "/liveness"
         };
     }
     rpc Env(EnvRequest) returns (Response) {

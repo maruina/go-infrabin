@@ -4,15 +4,62 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
+	grpc_health_v1 "github.com/maruina/go-infrabin/pkg/grpc/health/v1"
+	"google.golang.org/grpc/health"
+
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+type HTTPServerOption func(ctx context.Context, s *HTTPServer)
+
+func RegisterHealth(pattern string, healthService *health.Server) HTTPServerOption {
+	return func(ctx context.Context, s *HTTPServer) {
+		// Register the handler to call local instance, i.e. no network calls
+		mux := newGatewayMux()
+		if err := grpc_health_v1.RegisterHealthHandlerServer(ctx, mux, healthService); err != nil {
+			log.Fatalf("gRPC server failed to register: %v", err)
+		}
+		var handler http.Handler
+		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
+			handler = http.StripPrefix(p, mux)
+		} else {
+			handler = mux
+		}
+		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
+	}
+}
+
+func RegisterInfrabin(pattern string, infrabinService InfrabinServer) HTTPServerOption {
+	return func(ctx context.Context, s *HTTPServer) {
+		// Register the handler to call local instance, i.e. no network calls
+		mux := newGatewayMux()
+		if err := RegisterInfrabinHandlerServer(ctx, mux, infrabinService); err != nil {
+			log.Fatalf("gRPC server failed to register: %v", err)
+		}
+		var handler http.Handler
+		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
+			handler = http.StripPrefix(p, mux)
+		} else {
+			handler = mux
+		}
+		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
+	}
+}
+
+func RegisterHandler(pattern string, handler http.Handler) HTTPServerOption {
+	return func(ctx context.Context, s *HTTPServer) {
+		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
+			handler = http.StripPrefix(p, handler)
+		}
+		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
+	}
+}
 
 type HTTPServer struct {
 	Name   string
-	Config *Config
 	Server *http.Server
 }
 
@@ -35,52 +82,38 @@ func (s *HTTPServer) Shutdown() {
 	}
 }
 
-func NewHTTPServer(name string, addr string, config *Config) *HTTPServer {
+func NewHTTPServer(name string, addr string, opts ...HTTPServerOption) *HTTPServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(passThroughHeaderMatcher))
+	// A standard http.Server
+	server := &http.Server{
+		Handler: http.NewServeMux(),
+		Addr:    addr,
+		// Good practice: enforce timeouts
+		WriteTimeout:      15 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		IdleTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
+	}
 
+	s := &HTTPServer{Name: name, Server: server}
+	for _, opt := range opts {
+		opt(ctx, s)
+	}
+	return s
+}
+
+func newGatewayMux() *runtime.ServeMux {
+	mux := runtime.NewServeMux(
+		runtime.WithIncomingHeaderMatcher(passThroughHeaderMatcher),
+	)
 	// Set default marshaller options
 	marshaler, _ := runtime.MarshalerForRequest(mux, &http.Request{})
 	jsonMarshaler := marshaler.(*runtime.HTTPBodyMarshaler).Marshaler.(*runtime.JSONPb)
 	jsonMarshaler.EmitUnpopulated = false
 	jsonMarshaler.UseProtoNames = true
-
-	// Register the handler to call local instance, i.e. no network calls
-	is := InfrabinService{Config: config}
-	err := RegisterInfrabinHandlerServer(ctx, mux, &is)
-	if err != nil {
-		log.Fatalf("gRPC server failed to register: %v", err)
-	}
-
-	// A standard http.Server
-	server := &http.Server{
-		Handler: mux,
-		Addr: addr,
-		// Good practice: enforce timeouts
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout: 15 * time.Second,
-		IdleTimeout: 30 * time.Second,
-		ReadHeaderTimeout: 2 * time.Second,
-	}
-	return &HTTPServer{Name: name, Config: config, Server: server}
-}
-
-// NewPromServer creates a new HTTP server with a Prometheus handler
-func NewPromServer(name string, addr string, config *Config) *HTTPServer {
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-	promServer := &http.Server{
-		Addr: addr,
-		Handler: mux,
-		// Good practice: enforce timeouts
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout: 15 * time.Second,
-		IdleTimeout: 30 * time.Second,
-		ReadHeaderTimeout: 2 * time.Second,
-	}
-	return &HTTPServer{Name: name, Config: config, Server: promServer}
+	return mux
 }
 
 // Keep the standard "Grpc-Metadata-" and well known behaviour

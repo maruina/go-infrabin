@@ -22,7 +22,7 @@ import (
 )
 
 // Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
-type InfrabinService struct{
+type InfrabinService struct {
 	UnimplementedInfrabinServer
 	Config *Config
 }
@@ -60,10 +60,6 @@ func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Re
 	time.Sleep(time.Duration(seconds) * time.Second)
 
 	return &Response{Delay: int32(seconds)}, nil
-}
-
-func (s *InfrabinService) Liveness(ctx context.Context, _ *Empty) (*Response, error) {
-	return &Response{Liveness: "pass"}, nil
 }
 
 func (s *InfrabinService) Env(ctx context.Context, request *EnvRequest) (*Response, error) {
