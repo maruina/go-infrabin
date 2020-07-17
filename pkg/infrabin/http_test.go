@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/spf13/viper"
 
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -25,7 +26,6 @@ import (
 func newHTTPInfrabinHandler() http.Handler {
 	return NewHTTPServer(
 		"test",
-		"",
 		RegisterInfrabin("/", &InfrabinService{}),
 	).Server.Handler
 }
@@ -33,7 +33,6 @@ func newHTTPInfrabinHandler() http.Handler {
 func newHTTPAdminHandler() http.Handler {
 	return NewHTTPServer(
 		"test-admin",
-		"",
 		RegisterHealth("/healthcheck/liveness/", health.NewServer()),
 		RegisterHealth("/healthcheck/readiness/", health.NewServer()),
 	).Server.Handler
@@ -256,6 +255,10 @@ func TestEnvHandlerNotFound(t *testing.T) {
 }
 
 func TestProxyHandler(t *testing.T) {
+
+	// Set the Proxy to true for testing
+	viper.Set("proxyEndpoint", true)
+
 	response, err := json.Marshal(map[string]string{"foo": "bar"})
 	if err != nil {
 		t.Fatalf("Failed to marshal fake response: %v", err)
@@ -284,8 +287,8 @@ func TestProxyHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	is := &InfrabinService{Config: &Config{EnableProxyEndpoint: true}}
-	handler := NewHTTPServer("test", "", RegisterInfrabin("/", is)).Server.Handler
+	is := &InfrabinService{}
+	handler := NewHTTPServer("test", RegisterInfrabin("/", is)).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -297,24 +300,25 @@ func TestProxyHandler(t *testing.T) {
 }
 
 func TestAWSHandler(t *testing.T) {
+
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte("{}")); err != nil {
 			t.Fatalf("Failed to write fake response body: %v", err)
 		}
 	}))
-	config := &Config{
-		EnableProxyEndpoint: true,
-		AWSMetadataEndpoint: mockServer.URL,
-	}
-	is := &InfrabinService{Config: config}
+
+	viper.Set("proxyEndpoint", true)
+	viper.Set("awsMetadataEndpoint", mockServer.URL)
+
+	is := &InfrabinService{}
 	req, err := http.NewRequest("GET", "/aws/foo", nil)
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", "", RegisterInfrabin("/", is)).Server.Handler
+	handler := NewHTTPServer("test", RegisterInfrabin("/", is)).Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -357,7 +361,6 @@ func TestPromHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler := NewHTTPServer(
 		"test-prom",
-		"",
 		RegisterHandler("/", promhttp.Handler()),
 	).Server.Handler
 	handler.ServeHTTP(rr, req)

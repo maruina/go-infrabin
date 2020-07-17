@@ -8,6 +8,7 @@ import (
 	"time"
 
 	grpc_health_v1 "github.com/maruina/go-infrabin/pkg/grpc/health/v1"
+	"github.com/spf13/viper"
 	"google.golang.org/grpc/health"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -82,9 +83,11 @@ func (s *HTTPServer) Shutdown() {
 	}
 }
 
-func NewHTTPServer(name string, addr string, opts ...HTTPServerOption) *HTTPServer {
+func NewHTTPServer(name string, opts ...HTTPServerOption) *HTTPServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	addr := viper.GetString(name+".host") + ":" + viper.GetString(name+".port")
 
 	// A standard http.Server
 	server := &http.Server{

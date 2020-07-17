@@ -19,12 +19,12 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/maruina/go-infrabin/internal/helpers"
+	"github.com/spf13/viper"
 )
 
 // Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
 type InfrabinService struct {
 	UnimplementedInfrabinServer
-	Config *Config
 }
 
 func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error) {
@@ -83,7 +83,7 @@ func (s *InfrabinService) Headers(ctx context.Context, request *HeadersRequest) 
 }
 
 func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*structpb.Struct, error) {
-	if !s.Config.EnableProxyEndpoint {
+	if !viper.GetBool("proxyEndpoint") {
 		return nil, status.Errorf(codes.Unimplemented, "Proxy endpoint disabled. Enabled with --enable-proxy-endpoint")
 	}
 	// Convert Struct into json []byte
@@ -129,7 +129,7 @@ func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*struct
 	if request.Path == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Path must not be empty")
 	}
-	u, err := url.Parse(s.Config.AWSMetadataEndpoint)
+	u, err := url.Parse(viper.GetString("awsMetadataEndpoint"))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "s.Config.AWSMetadataEndpoint invalid: %v", err)
 	}

@@ -6,6 +6,7 @@ import (
 	"os/signal"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/spf13/viper"
 
 	"github.com/maruina/go-infrabin/pkg/infrabin"
 )
@@ -17,11 +18,13 @@ func main() {
 	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
 	signal.Notify(finish, os.Interrupt)
 
-	// Make config
-	config := infrabin.DefaultConfig()
+	// Parse the configuration or set default configuration
+	infrabin.ReadConfiguration()
+
+	proxyEndpoint := viper.GetBool("proxyEndpoint")
 
 	flag.BoolVar(
-		&config.EnableProxyEndpoint,
+		&proxyEndpoint,
 		"enable-proxy-endpoint",
 		false,
 		"If true, enables proxy and aws endpoints",
@@ -29,13 +32,12 @@ func main() {
 	flag.Parse()
 
 	// run grpc server in background
-	grpcServer := infrabin.NewGRPCServer(config)
+	grpcServer := infrabin.NewGRPCServer()
 	go grpcServer.ListenAndServe()
 
 	// run service server in background
 	server := infrabin.NewHTTPServer(
 		"server",
-		"0.0.0.0:8888",
 		infrabin.RegisterInfrabin("/", grpcServer.InfrabinService),
 	)
 	go server.ListenAndServe()
@@ -43,7 +45,6 @@ func main() {
 	// run admin server in background
 	admin := infrabin.NewHTTPServer(
 		"admin",
-		"0.0.0.0:8899",
 		infrabin.RegisterHealth("/healthcheck/liveness/", grpcServer.HealthService),
 		infrabin.RegisterHealth("/healthcheck/readiness/", grpcServer.HealthService),
 	)
@@ -52,7 +53,6 @@ func main() {
 	// run Prometheus server
 	promServer := infrabin.NewHTTPServer(
 		"prom",
-		"0.0.0.0:8877",
 		infrabin.RegisterHandler("/", promhttp.Handler()),
 	)
 	go promServer.ListenAndServe()
