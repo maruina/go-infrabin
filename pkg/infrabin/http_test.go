@@ -287,8 +287,7 @@ func TestProxyHandler(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	is := &InfrabinService{}
-	handler := NewHTTPServer("test", RegisterInfrabin("/", is)).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -311,14 +310,13 @@ func TestAWSHandler(t *testing.T) {
 	viper.Set("proxyEndpoint", true)
 	viper.Set("awsMetadataEndpoint", mockServer.URL)
 
-	is := &InfrabinService{}
 	req, err := http.NewRequest("GET", "/aws/foo", nil)
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
 	}
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer("test", RegisterInfrabin("/", is)).Server.Handler
+	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
