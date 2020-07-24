@@ -5,6 +5,7 @@ import (
 	"net"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -14,7 +15,6 @@ import (
 // Server wraps the gRPC server and implements infrabin.Infrabin
 type GRPCServer struct {
 	Name            string
-	Config          *Config
 	Server          *grpc.Server
 	InfrabinService InfrabinServer
 	HealthService   *health.Server
@@ -22,9 +22,11 @@ type GRPCServer struct {
 
 // ListenAndServe binds the server to the indicated interface:port.
 func (s *GRPCServer) ListenAndServe() {
-	ln, err := net.Listen("tcp", "0.0.0.0:50051")
+	addr := viper.GetString(s.Name+".host") + ":" + viper.GetString(s.Name+".port")
+
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("Listen failed on 0.0.0.0:50051: %v", err)
+		log.Fatalf("Listen failed on "+addr+": %v", err)
 	}
 
 	log.Printf("Starting %s server on %s", s.Name, ln.Addr())
@@ -42,7 +44,7 @@ func (s *GRPCServer) Shutdown() {
 }
 
 // New creates a new rpc server.
-func NewGRPCServer(config *Config) *GRPCServer {
+func NewGRPCServer() *GRPCServer {
 	gs := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
@@ -50,7 +52,7 @@ func NewGRPCServer(config *Config) *GRPCServer {
 
 	// Create the gPRC services
 	healthServer := health.NewServer()
-	infrabinService := &InfrabinService{Config: config}
+	infrabinService := &InfrabinService{}
 
 	// Register gRPC services on the grpc server
 	RegisterInfrabinServer(gs, infrabinService)
@@ -63,7 +65,6 @@ func NewGRPCServer(config *Config) *GRPCServer {
 
 	return &GRPCServer{
 		Name:            "grpc",
-		Config:          config,
 		Server:          gs,
 		InfrabinService: infrabinService,
 		HealthService:   healthServer,
