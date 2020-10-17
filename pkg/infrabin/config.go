@@ -2,6 +2,7 @@ package infrabin
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -43,6 +44,9 @@ func ReadConfiguration() {
 
 	// Other Infrastructure Defaults
 	viper.SetDefault("awsMetadataEndpoint", "http://169.254.169.254/latest/meta-data/")
+
+	// Graceful timeout duration
+	viper.SetDefault("drainTimeout", 15*time.Second)
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
