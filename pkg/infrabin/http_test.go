@@ -39,10 +39,7 @@ func newHTTPAdminHandler() http.Handler {
 }
 
 func TestRootHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -75,10 +72,7 @@ func TestFailRootHandler(t *testing.T) {
 	if err := os.Setenv("FAIL_ROOT_HANDLER", "true"); err != nil {
 		t.Errorf("cannot set environment variable")
 	}
-	req, err := http.NewRequest("GET", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -87,7 +81,7 @@ func TestFailRootHandler(t *testing.T) {
 	if status := rr.Code; status != http.StatusServiceUnavailable {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusServiceUnavailable)
 	}
-	if err = os.Unsetenv("FAIL_ROOT_HANDLER"); err != nil {
+	if err := os.Unsetenv("FAIL_ROOT_HANDLER"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -103,10 +97,7 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	os.Setenv("POD_IP", podIP)
 	os.Setenv("NODE_NAME", nodeName)
 
-	req, err := http.NewRequest("GET", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -137,10 +128,7 @@ func TestRootHandlerKubernetes(t *testing.T) {
 }
 
 func TestDelayHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/delay/1", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/delay/1", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -159,10 +147,7 @@ func TestDelayHandler(t *testing.T) {
 }
 
 func TestDelayHandlerBadRequest(t *testing.T) {
-	req, err := http.NewRequest("GET", "/delay/abc", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/delay/abc", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -184,10 +169,7 @@ func TestDelayHandlerBadRequest(t *testing.T) {
 }
 
 func TestHeadersHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/headers", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/headers", nil)
 	req.Header.Set("X-Request-Id", "Test-Header") // Custom header
 	req.Header.Set("Accept", "*/*")               // Well known header
 	req.Header.Set("Grpc-Metadata-Foo", "bar")    // gRPC metadata
@@ -204,6 +186,8 @@ func TestHeadersHandler(t *testing.T) {
 		"grpcgateway-x-request-id": "Test-Header",
 		"grpcgateway-accept":       "*/*",
 		"foo":                      "bar",
+		"x-forwarded-for":          "192.0.2.1",   // from httptest.NewRequest
+		"x-forwarded-host":         "example.com", // from httptest.NewRequest
 	}}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	data, _ := marshalOptions.Marshal(&expected)
@@ -217,10 +201,7 @@ func TestEnvHandler(t *testing.T) {
 	if err := os.Setenv("TEST_ENV", "foo"); err != nil {
 		t.Errorf("cannot set environment variable")
 	}
-	req, err := http.NewRequest("GET", "/env/TEST_ENV", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/env/TEST_ENV", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -240,10 +221,7 @@ func TestEnvHandler(t *testing.T) {
 }
 
 func TestEnvHandlerNotFound(t *testing.T) {
-	req, err := http.NewRequest("GET", "/env/NOT_FOUND", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/env/NOT_FOUND", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -281,10 +259,7 @@ func TestProxyHandler(t *testing.T) {
 		t.Fatalf("Failed to make request body: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", "/proxy", bytes.NewReader(body))
-	if err != nil {
-		t.Fatalf("Failed to make request: %v", err)
-	}
+	req := httptest.NewRequest("POST", "/proxy", bytes.NewReader(body))
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -310,10 +285,7 @@ func TestAWSHandler(t *testing.T) {
 	viper.Set("proxyEndpoint", true)
 	viper.Set("awsMetadataEndpoint", mockServer.URL)
 
-	req, err := http.NewRequest("GET", "/aws/foo", nil)
-	if err != nil {
-		t.Fatalf("Failed to make request: %v", err)
-	}
+	req := httptest.NewRequest("GET", "/aws/foo", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -328,10 +300,7 @@ func TestAWSHandler(t *testing.T) {
 }
 
 func TestHealthHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/healthcheck/liveness/check", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/healthcheck/liveness/check", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPAdminHandler()
@@ -351,10 +320,7 @@ func TestHealthHandler(t *testing.T) {
 }
 
 func TestPromHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/metrics", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/metrics", nil)
 
 	rr := httptest.NewRecorder()
 	handler := NewHTTPServer(
