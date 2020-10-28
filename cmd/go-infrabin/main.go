@@ -33,7 +33,7 @@ func main() {
 
 	// run grpc server in background
 	grpcServer := infrabin.NewGRPCServer()
-	go grpcServer.ListenAndServe()
+	go grpcServer.ListenAndServe(nil)
 
 	// run service server in background
 	server := infrabin.NewHTTPServer(

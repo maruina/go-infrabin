@@ -72,8 +72,9 @@ func (s *HTTPServer) ListenAndServe() {
 }
 
 func (s *HTTPServer) Shutdown() {
-	log.Printf("Shutting down %s server with 15s graceful shutdown", s.Name)
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	drainTimeout := viper.GetDuration("drainTimeout")
+	log.Printf("Shutting down %s server with %s graceful shutdown", s.Name, drainTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), drainTimeout)
 	defer cancel()
 
 	if err := s.Server.Shutdown(ctx); err != nil {
