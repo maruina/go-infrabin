@@ -1,7 +1,9 @@
 package helpers
 
+import "time"
+
 // Min returns the smaller of x or y.
-func Min(x, y int) int {
+func MinDuration(x, y time.Duration) time.Duration {
 	if x > y {
 		return y
 	}

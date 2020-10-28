@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	grpc_health_v1 "github.com/maruina/go-infrabin/pkg/grpc/health/v1"
 	"github.com/spf13/viper"
@@ -95,10 +94,10 @@ func NewHTTPServer(name string, opts ...HTTPServerOption) *HTTPServer {
 		Handler: http.NewServeMux(),
 		Addr:    addr,
 		// Good practice: enforce timeouts
-		WriteTimeout:      15 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		IdleTimeout:       30 * time.Second,
-		ReadHeaderTimeout: 2 * time.Second,
+		WriteTimeout:      viper.GetDuration("httpWriteTimeout"),
+		ReadTimeout:       viper.GetDuration("httpReadTimeout"),
+		IdleTimeout:       viper.GetDuration("httpIdleTimeout"),
+		ReadHeaderTimeout: viper.GetDuration("httpReadHeaderTimeout"),
 	}
 
 	s := &HTTPServer{Name: name, Server: server}
