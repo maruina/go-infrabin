@@ -48,6 +48,16 @@ func ReadConfiguration() {
 	// Graceful timeout duration
 	viper.SetDefault("drainTimeout", 15*time.Second)
 
+	// Max delay duration for Delay endpoint
+	maxDelay := 120 * time.Second
+	viper.SetDefault("maxDelay", maxDelay)
+
+	// http timeouts
+	viper.SetDefault("httpWriteTimeout", maxDelay+time.Second)
+	viper.SetDefault("httpReadTimeout", 60*time.Second)
+	viper.SetDefault("httpIdleTimeout", 15*time.Second)
+	viper.SetDefault("httpReadHeaderTimeout", 15*time.Second)
+
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Will just use the default configuration.

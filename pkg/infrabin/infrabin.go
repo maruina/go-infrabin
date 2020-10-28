@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -50,16 +49,13 @@ func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error)
 }
 
 func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Response, error) {
-	maxDelay, err := strconv.Atoi(helpers.GetEnv("INFRABIN_MAX_DELAY", "120"))
-	if err != nil {
-		log.Fatalf("cannot convert env var INFRABIN_MAX_DELAY to integer: %v", err)
-		return nil, status.Error(codes.Internal, "cannot convert env var INFRABIN_MAX_DELAY to integer")
-	}
+	maxDelay := viper.GetDuration("maxDelay")
+	requestDuration := time.Duration(request.Duration) * time.Second
 
-	seconds := helpers.Min(int(request.Duration), maxDelay)
-	time.Sleep(time.Duration(seconds) * time.Second)
+	duration := helpers.MinDuration(requestDuration, maxDelay)
+	time.Sleep(duration)
 
-	return &Response{Delay: int32(seconds)}, nil
+	return &Response{Delay: int32(duration.Seconds())}, nil
 }
 
 func (s *InfrabinService) Env(ctx context.Context, request *EnvRequest) (*Response, error) {
