@@ -4,8 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
+	"github.com/gorilla/handlers"
 	grpc_health_v1 "github.com/maruina/go-infrabin/pkg/grpc/health/v1"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/health"
@@ -64,6 +66,9 @@ type HTTPServer struct {
 }
 
 func (s *HTTPServer) ListenAndServe() {
+	// Wrap handler now that everything is registered
+	s.Server.Handler = handlers.RecoveryHandler()(handlers.ProxyHeaders(handlers.CombinedLoggingHandler(os.Stdout, s.Server.Handler)))
+
 	log.Printf("Starting %s server on %s", s.Name, s.Server.Addr)
 	if err := s.Server.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatal("HTTP server crashed", err)
