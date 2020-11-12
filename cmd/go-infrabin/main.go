@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
@@ -15,8 +16,9 @@ func main() {
 	// Create a channel to catch signals
 	finish := make(chan os.Signal, 1)
 	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
-	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
-	signal.Notify(finish, os.Interrupt)
+	// and SIGTERM (used in docker and kubernetes)
+	// SIGKILL or SIGQUIT will not be caught.
+	signal.Notify(finish, syscall.SIGINT, syscall.SIGTERM)
 
 	// Parse the configuration or set default configuration
 	infrabin.ReadConfiguration()
