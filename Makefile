@@ -1,4 +1,5 @@
 BINARY_NAME=go-infrabin
+GIT_COMMIT := $(shell git rev-parse --short HEAD)
 
 all: dep test
 
@@ -35,7 +36,7 @@ protoc:
 	rm pkg/grpc/health/v1/health.pb.gw.go.bak
 
 build: protoc
-	go build -o $(BINARY_NAME) cmd/$(BINARY_NAME)/main.go
+	go build -o $(BINARY_NAME) -ldflags "-X github.com/maruina/go-infrabin/cmd.gitCommit=$(GIT_COMMIT)" main.go
 
 run: build
 	./$(BINARY_NAME)
