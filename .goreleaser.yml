@@ -2,7 +2,7 @@ changelog:
   skip: true
 # Build customization
 builds:
-  - main: ./cmd/go-infrabin/main.go
+  - main: main.go
     binary: go-infrabin
     goos:
       - windows
