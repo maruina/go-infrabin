@@ -16,8 +16,8 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   "go-infrabin",
 	Short: "an HTTP and gRPC service to test infrastructure",
-	Long: `go-infrabin is an HTTP and gRPC requests and response server.
-It can be used to test your service mesh, network or infrastructures.`,
+	Long: `go-infrabin is an HTTP and gRPC requests and responses server.
+It can be used to test your service mesh and network.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
