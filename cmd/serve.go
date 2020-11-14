@@ -1,9 +1,15 @@
 package cmd
 
 import (
-	"fmt"
+	"flag"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/maruina/go-infrabin/pkg/infrabin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // serveCmd represents the serve command
@@ -17,7 +23,61 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("serve called")
+
+		// Create a channel to catch signals
+		finish := make(chan os.Signal, 1)
+		// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
+		// and SIGTERM (used in docker and kubernetes)
+		// SIGKILL or SIGQUIT will not be caught.
+		signal.Notify(finish, syscall.SIGINT, syscall.SIGTERM)
+
+		// Parse the configuration or set default configuration
+		infrabin.ReadConfiguration()
+
+		proxyEndpoint := viper.GetBool("proxyEndpoint")
+
+		flag.BoolVar(
+			&proxyEndpoint,
+			"enable-proxy-endpoint",
+			false,
+			"If true, enables proxy and aws endpoints",
+		)
+		flag.Parse()
+
+		// run grpc server in background
+		grpcServer := infrabin.NewGRPCServer()
+		go grpcServer.ListenAndServe(nil)
+
+		// run service server in background
+		server := infrabin.NewHTTPServer(
+			"server",
+			infrabin.RegisterInfrabin("/", grpcServer.InfrabinService),
+		)
+		go server.ListenAndServe()
+
+		// run admin server in background
+		admin := infrabin.NewHTTPServer(
+			"admin",
+			infrabin.RegisterHealth("/healthcheck/liveness/", grpcServer.HealthService),
+			infrabin.RegisterHealth("/healthcheck/readiness/", grpcServer.HealthService),
+		)
+		go admin.ListenAndServe()
+
+		// run Prometheus server
+		promServer := infrabin.NewHTTPServer(
+			"prom",
+			infrabin.RegisterHandler("/", promhttp.Handler()),
+		)
+		go promServer.ListenAndServe()
+
+		// wait for SIGINT
+		<-finish
+
+		admin.Shutdown()
+		server.Shutdown()
+		grpcServer.Shutdown()
+		promServer.Shutdown()
+
 	},
 }
 
