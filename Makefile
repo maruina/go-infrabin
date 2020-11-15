@@ -39,7 +39,7 @@ build: protoc
 	go build -o $(BINARY_NAME) -ldflags "-X github.com/maruina/go-infrabin/cmd.gitCommit=$(GIT_COMMIT)" main.go
 
 run: build
-	./$(BINARY_NAME)
+	./$(BINARY_NAME) serve
 
 dep:
 	go get ./...
