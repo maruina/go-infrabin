@@ -49,7 +49,7 @@ jobs:
         version: v1.26
 
     - name: Build
-      run: go build -v cmd/go-infrabin/main.go
+      run: go build main.go
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
