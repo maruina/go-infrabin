@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/maruina/go-infrabin/pkg/infrabin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -15,13 +16,10 @@ import (
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "start go-infrabin",
+	Long: `Start go-infrabin to serve traffic.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+By default the proxy endpoints are disabled.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Create a channel to catch signals
@@ -31,26 +29,13 @@ to quickly create a Cobra application.`,
 		// SIGKILL or SIGQUIT will not be caught.
 		signal.Notify(finish, syscall.SIGINT, syscall.SIGTERM)
 
-		// Parse the configuration or set default configuration
-		infrabin.ReadConfiguration()
-
-		proxyEndpoint := viper.GetBool("proxyEndpoint")
-
-		flag.BoolVar(
-			&proxyEndpoint,
-			"enable-proxy-endpoint",
-			false,
-			"If true, enables proxy and aws endpoints",
-		)
-		flag.Parse()
-
 		// run grpc server in background
 		grpcServer := infrabin.NewGRPCServer()
 		go grpcServer.ListenAndServe(nil)
 
 		// run service server in background
 		server := infrabin.NewHTTPServer(
-			"server",
+			"http",
 			infrabin.RegisterInfrabin("/", grpcServer.InfrabinService),
 		)
 		go server.ListenAndServe()
@@ -84,13 +69,26 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(serveCmd)
 
-	// Here you will define your flags and configuration settings.
+	serveCmd.Flags().Bool("enable-proxy-endpoint", false, "If true, enables proxy and aws endpoints.")
+	serveCmd.Flags().String("grpc-host", "0.0.0.0", "the address to bind the gRPC server.")
+	serveCmd.Flags().Int("grpc-port", 50051, "the gRPC server port.")
+	serveCmd.Flags().String("http-host", "0.0.0.0", "the address to bind the HTTP server.")
+	serveCmd.Flags().Int("http-port", 8888, "the HTTP server port.")
+	serveCmd.Flags().String("admin-host", "0.0.0.0", "the address to bind the admin server.")
+	serveCmd.Flags().Int("admin-port", 8889, "the admin server port.")
+	serveCmd.Flags().String("prom-host", "0.0.0.0", "the address to bind the Prometheus metric server.")
+	serveCmd.Flags().Int("prom-port", 8887, "the Prometheus server port.")
+	serveCmd.Flags().String("aws-metadata-endpoint", "http://169.254.169.254/latest/meta-data/", "the AWS metadata endpoint URL.")
+	serveCmd.Flags().Duration("drain-timeout", viper.GetDuration("max-delay-endpoint")+time.Second, "the drain timeout to allow terminating in-flight requests.")
+	serveCmd.Flags().Duration("max-delay-endpoint", 120*time.Second, "the max delay for the delay endpoint.")
+	serveCmd.Flags().Duration("http-write-timeout", viper.GetDuration("max-delay-endpoint")+time.Second, "")
+	serveCmd.Flags().Duration("http-read-timeout", 60*time.Second, "maximum duration for reading the entire request, including the body.")
+	serveCmd.Flags().Duration("http-idle-timeout", 15*time.Second, "the maximum amount of time to wait for the next request when keep-alives are enabled.")
+	serveCmd.Flags().Duration("http-read-header-timeout", 15*time.Second, "the amount of time allowed to read request headers.")
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// serveCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// serveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// Bind every cobra flag to viper
+	if err := viper.BindPFlags(serveCmd.Flags()); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }

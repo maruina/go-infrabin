@@ -24,7 +24,7 @@ type GRPCServer struct {
 // ListenAndServe binds the server to the indicated interface:port.
 // Pass lis as nil to be bound to the config port. lis can be passed for testing
 func (s *GRPCServer) ListenAndServe(lis net.Listener) {
-	addr := viper.GetString(s.Name+".host") + ":" + viper.GetString(s.Name+".port")
+	addr := viper.GetString(s.Name+"-host") + ":" + viper.GetString(s.Name+"-port")
 
 	var err error
 	if lis == nil {
@@ -40,7 +40,7 @@ func (s *GRPCServer) ListenAndServe(lis net.Listener) {
 }
 
 func (s *GRPCServer) Shutdown() {
-	drainTimeout := viper.GetDuration("drainTimeout")
+	drainTimeout := viper.GetDuration("drain-timeout")
 	ctx, cancel := context.WithTimeout(context.Background(), drainTimeout)
 	defer cancel()
 	gracefulDone := make(chan struct{}, 1)

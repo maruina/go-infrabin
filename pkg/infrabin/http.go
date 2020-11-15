@@ -76,7 +76,7 @@ func (s *HTTPServer) ListenAndServe() {
 }
 
 func (s *HTTPServer) Shutdown() {
-	drainTimeout := viper.GetDuration("drainTimeout")
+	drainTimeout := viper.GetDuration("drain-timeout")
 	log.Printf("Shutting down %s server with %s graceful shutdown", s.Name, drainTimeout)
 	ctx, cancel := context.WithTimeout(context.Background(), drainTimeout)
 	defer cancel()
@@ -92,17 +92,17 @@ func NewHTTPServer(name string, opts ...HTTPServerOption) *HTTPServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	addr := viper.GetString(name+".host") + ":" + viper.GetString(name+".port")
+	addr := viper.GetString(name+"-host") + ":" + viper.GetString(name+"-port")
 
 	// A standard http.Server
 	server := &http.Server{
 		Handler: http.NewServeMux(),
 		Addr:    addr,
 		// Good practice: enforce timeouts
-		WriteTimeout:      viper.GetDuration("httpWriteTimeout"),
-		ReadTimeout:       viper.GetDuration("httpReadTimeout"),
-		IdleTimeout:       viper.GetDuration("httpIdleTimeout"),
-		ReadHeaderTimeout: viper.GetDuration("httpReadHeaderTimeout"),
+		WriteTimeout:      viper.GetDuration("http-write-timeout"),
+		ReadTimeout:       viper.GetDuration("http-read-timeout"),
+		IdleTimeout:       viper.GetDuration("http-idle-timeout"),
+		ReadHeaderTimeout: viper.GetDuration("http-read-header-timeout"),
 	}
 
 	s := &HTTPServer{Name: name, Server: server}

@@ -13,7 +13,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print go-infrabin version",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("go-infrabin version %s", gitCommit)
+		fmt.Printf("go-infrabin commit %s", gitCommit)
 	},
 }
 

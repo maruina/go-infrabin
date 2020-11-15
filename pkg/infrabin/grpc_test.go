@@ -26,7 +26,7 @@ func TestShutdown(t *testing.T) {
 	t.Parallel()
 	// Override drainTimeout for test
 	drainTimeout := 500 * time.Millisecond
-	viper.Set("drainTimeout", drainTimeout)
+	viper.Set("drain-timeout", drainTimeout)
 
 	// Create server and client
 	lis := bufconn.Listen(1024 * 1024) // use a bufconn listener for testing

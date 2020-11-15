@@ -235,7 +235,7 @@ func TestEnvHandlerNotFound(t *testing.T) {
 func TestProxyHandler(t *testing.T) {
 
 	// Set the Proxy to true for testing
-	viper.Set("proxyEndpoint", true)
+	viper.Set("enable-proxy-endpoint", true)
 
 	response, err := json.Marshal(map[string]string{"foo": "bar"})
 	if err != nil {
@@ -282,8 +282,8 @@ func TestAWSHandler(t *testing.T) {
 		}
 	}))
 
-	viper.Set("proxyEndpoint", true)
-	viper.Set("awsMetadataEndpoint", mockServer.URL)
+	viper.Set("proxy-endpoint", true)
+	viper.Set("aws-metadata-endpoint", mockServer.URL)
 
 	req := httptest.NewRequest("GET", "/aws/foo", nil)
 

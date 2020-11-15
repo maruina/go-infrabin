@@ -49,7 +49,7 @@ func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error)
 }
 
 func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Response, error) {
-	maxDelay := viper.GetDuration("maxDelay")
+	maxDelay := viper.GetDuration("max-delay")
 	requestDuration := time.Duration(request.Duration) * time.Second
 
 	duration := helpers.MinDuration(requestDuration, maxDelay)
@@ -79,7 +79,7 @@ func (s *InfrabinService) Headers(ctx context.Context, request *HeadersRequest) 
 }
 
 func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*structpb.Struct, error) {
-	if !viper.GetBool("proxyEndpoint") {
+	if !viper.GetBool("enable-proxy-endpoint") {
 		return nil, status.Errorf(codes.Unimplemented, "Proxy endpoint disabled. Enabled with --enable-proxy-endpoint")
 	}
 	// Convert Struct into json []byte
@@ -125,7 +125,7 @@ func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*struct
 	if request.Path == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Path must not be empty")
 	}
-	u, err := url.Parse(viper.GetString("awsMetadataEndpoint"))
+	u, err := url.Parse(viper.GetString("aws-metadata-endpoint"))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "s.Config.AWSMetadataEndpoint invalid: %v", err)
 	}
