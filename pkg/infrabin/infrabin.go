@@ -49,7 +49,7 @@ func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error)
 }
 
 func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Response, error) {
-	maxDelay := viper.GetDuration("max-delay")
+	maxDelay := viper.GetDuration("max-delay-endpoint")
 	requestDuration := time.Duration(request.Duration) * time.Second
 
 	duration := helpers.MinDuration(requestDuration, maxDelay)

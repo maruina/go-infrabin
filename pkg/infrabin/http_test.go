@@ -8,6 +8,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
@@ -129,7 +130,9 @@ func TestRootHandlerKubernetes(t *testing.T) {
 
 func TestDelayHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/delay/1", nil)
-
+	// Without setting a value for the max-delay-endpoint here the test fails
+	// I don't know if we are missing a binding between viper and cobra
+	viper.Set("max-delay-endpoint", 5*time.Second)
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
