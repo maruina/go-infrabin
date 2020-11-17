@@ -285,7 +285,7 @@ func TestAWSHandler(t *testing.T) {
 		}
 	}))
 
-	viper.Set("proxy-endpoint", true)
+	viper.Set("enable-proxy-endpoint", true)
 	viper.Set("aws-metadata-endpoint", mockServer.URL)
 
 	req := httptest.NewRequest("GET", "/aws/foo", nil)
