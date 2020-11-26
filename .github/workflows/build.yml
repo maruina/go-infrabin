@@ -44,9 +44,9 @@ jobs:
       run: make protoc
 
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v0.2.0
+      uses: golangci/golangci-lint-action@v2
       with:
-        version: v1.26
+        version: v1.29
 
     - name: Build
       run: go build -v cmd/go-infrabin/main.go
