@@ -6,7 +6,7 @@ RUN apt-get update && \
     unzip protoc/protoc.zip -d protoc/ && \
     mv protoc/bin/protoc /usr/local/bin/ && \
     mv protoc/include /usr/local && \
-    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
+    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.29.0
 RUN wget -O /envoy-preflight https://github.com/monzo/envoy-preflight/releases/download/v1.0/envoy-preflight && \
     chmod +x /envoy-preflight
 WORKDIR /go/src/go-infrabin
