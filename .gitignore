@@ -15,7 +15,7 @@
 go-infrabin
 
 # Add chart
-!chart/go-infrabin/
+!charts/go-infrabin/
 
 .idea/
 .vscode/
