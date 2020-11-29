@@ -1,6 +1,6 @@
 # go-infrabin
 
-A Helm chart for Kubernetes
+A Helm chart for Kubernetes installation of go-infrabin - infrabin written in go
 
 ## Installing the Chart
 
