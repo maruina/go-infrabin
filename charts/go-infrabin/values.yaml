@@ -7,7 +7,7 @@ replicaCount: 1
 image:
   repository: maruina/go-infrabin
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart version.
+  # Overrides the image tag whose default is the application version.
   tag: ""
 
 imagePullSecrets: []
