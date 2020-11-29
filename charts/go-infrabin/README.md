@@ -1,6 +1,6 @@
 # go-infrabin
 
-A Helm chart for Kubernetes
+A Helm chart for Kubernetes installation of go-infrabin - infrabin written in go
 
 ## Installing the Chart
 
@@ -63,6 +63,7 @@ helm upgrade quirky-walrus go-infrabin --namespace infrabin --set image.tag=late
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| deployment.adminPort | int | `8889` |  |
 | extraEnv | list | `[]` |  |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |

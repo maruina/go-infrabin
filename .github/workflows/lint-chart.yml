@@ -5,7 +5,7 @@ on: pull_request
 jobs:
   changes:
     outputs:
-      chart: ${{ steps.filter.outputs.chart }}
+      charts: ${{ steps.filter.outputs.charts }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -14,12 +14,12 @@ jobs:
         uses: dorny/paths-filter@v2.2.0
         with:
           filters: |
-            chart:
-              - 'chart/**/Chart.yaml'
-              - 'chart/**/*'
+            charts:
+              - 'charts/**/Chart.yaml'
+              - 'charts/**/*'
           token: ${{ secrets.GITHUB_TOKEN }}
   helm-lint-test:
-    if: ${{ needs.changes.outputs.chart == 'true' }}
+    if: ${{ needs.changes.outputs.charts == 'true' }}
     name: Helm chart
     needs:
       - changes
@@ -48,7 +48,7 @@ jobs:
           command: install
 
   helm-docs-validate:
-    if: ${{ needs.changes.outputs.chart == 'true' }}
+    if: ${{ needs.changes.outputs.charts == 'true' }}
     name: Helm Docs
     needs:
       - changes
@@ -59,4 +59,4 @@ jobs:
       - name: Run helm-docs
         uses: docker://jnorwood/helm-docs:v1.3.0
       - name: Check for changes
-        run: git diff --quiet chart/*/README.md
+        run: git diff --quiet charts/*/README.md
