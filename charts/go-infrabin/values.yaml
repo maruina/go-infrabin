@@ -40,6 +40,9 @@ service:
   type: ClusterIP
   port: 80
 
+deployment:
+  adminPort: 8889
+
 ingress:
   enabled: false
   annotations: {}
