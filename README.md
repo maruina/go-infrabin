@@ -15,14 +15,29 @@
 * `8899` as the http rest admin port, for liveness and readiness probes
 * `50051` as a grpc port
 
-
 ## Installation
 
 See the [README](./chart/go-infrabin/README.md).
 
 ## Command line flags
 
-* `--enable-proxy-endpoint`: If true allows `/proxy` and `/aws` endpoints
+* `--admin-host`: HTTP server host (default `0.0.0.0`)
+* `--admin-port`: HTTP server port (default `8889`)
+* `--aws-metadata-endpoint`: AWS Metadata Endpoint (default `http://169.254.169.254/latest/meta-data/`)
+* `--drain-timeout`: Drain timeout (default `15s`)
+* `--enable-proxy-endpoint`: When enabled allows `/proxy` and `/aws` endpoints
+* `--grpc-host`: gRPC host (default `0.0.0.0`)
+* `--grpc-port`: gRPC port (default `50051`)
+* `-h`, `--help`: help for go-infrabin
+* `--http-idle-timeout`: HTTP idle timeout (default `15s`)
+* `--http-read-header-timeout`: HTTP read header timeout (default `15s`)
+* `--http-read-timeout`: HTTP read timeout (default `1m0s`)
+* `--http-write-timeout`: HTTP write timeout (default `2m1s`)
+* `--max-delay duration`: Maximum delay (default `2m0s`)
+* `--prom-host`: Prometheus metrics host (default `0.0.0.0`)
+* `--prom-port`: Prometheus metrics port (default `8887`)
+* `--server-host`: HTTP server host (default `0.0.0.0`)
+* `--server-port`: HTTP server port (default `8888`)
 
 ## Environment variables
 
