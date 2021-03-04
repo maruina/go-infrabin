@@ -30,7 +30,7 @@ jobs:
       uses: arduino/setup-protoc@master
 
     - name: Get dependencies
-      run: go get -t -v -d ./...
+      run: make dep
 
     - name: Get protoc go binaries
       run: |
