@@ -24,9 +24,6 @@ jobs:
     - name: Install Protoc
       uses: arduino/setup-protoc@master
 
-    - name: Get dependencies
-      run: go mod download
-
     - name: Get protoc go binaries
       run: |
         go install \
@@ -41,14 +38,6 @@ jobs:
     - name: Get tag
       uses: olegtarasov/get-tag@v2.1
       id: tagName
-
-    - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v2
-      with:
-        version: latest
-        args: release --rm-dist
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push tagged docker image on master
       uses: docker/build-push-action@v2.3.0
