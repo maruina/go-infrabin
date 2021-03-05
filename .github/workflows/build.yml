@@ -1,4 +1,4 @@
-name: PR workflow
+name: Build
 
 on:
   push:
@@ -15,13 +15,7 @@ jobs:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.14
-      id: go
-
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
-      with:
-        languages: go
+        go-version: ^1.16
 
     - name: Check out code
       uses: actions/checkout@v2
@@ -43,19 +37,11 @@ jobs:
     - name: Genereate code for infrabin protofile
       run: make protoc
 
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v2
-      with:
-        version: v1.29
-
     - name: Build
-      run: go build -v cmd/go-infrabin/main.go
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      run: make build
 
     - name: Test
-      run: go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
+      run: make test-ci
 
     - name: Send coverage
       uses: shogo82148/actions-goveralls@v1

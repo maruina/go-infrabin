@@ -1,57 +1,52 @@
-name: Lint and Test Charts
+name: Lint and Test Chart
 
 on: pull_request
 
 jobs:
-  changes:
-    outputs:
-      charts: ${{ steps.filter.outputs.charts }}
+  lint-test-chart:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - id: filter
-        uses: dorny/paths-filter@v2.9.0
         with:
-          filters: |
-            charts:
-              - 'charts/**/Chart.yaml'
-              - 'charts/**/*'
-          token: ${{ secrets.GITHUB_TOKEN }}
-  helm-lint-test:
-    if: ${{ needs.changes.outputs.charts == 'true' }}
-    name: Helm chart
-    needs:
-      - changes
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+          fetch-depth: 0
 
-      - name: Fetch history
-        run: git fetch --prune --unshallow
+      - name: Set up Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: v3.5.2
 
-      - id: lint
-        name: Run chart-testing (lint)
+      # Python is required because `ct lint` runs Yamale (https://github.com/23andMe/Yamale) and
+      # yamllint (https://github.com/adrienverge/yamllint) which require Python
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Set up chart-testing
         uses: helm/chart-testing-action@v2.0.1
         with:
-          command: lint
+          version: v3.3.0
 
-      # Only build a kind cluster if there are chart changes to test.
-      - if: steps.lint.outputs.changed == 'true'
-        name: Create kind cluster
+      - name: Run chart-testing (list-changed)
+        id: list-changed
+        run: |
+          changed=$(ct list-changed --config ct.yaml)
+          if [[ -n "$changed" ]]; then
+            echo "::set-output name=changed::true"
+          fi
+
+      - name: Run chart-testing (lint)
+        run: ct lint --config ct.yaml
+
+      - name: Create kind cluster
         uses: helm/kind-action@v1.1.0
+        if: steps.list-changed.outputs.changed == 'true'
 
       - name: Run chart-testing (install)
-        uses: helm/chart-testing-action@v2.0.1
-        with:
-          command: install
+        run: ct install --config ct.yaml
+        if: steps.list-changed.outputs.changed == 'true'
 
-  helm-docs-validate:
-    if: ${{ needs.changes.outputs.charts == 'true' }}
-    name: Helm Docs
-    needs:
-      - changes
+  helm-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -59,6 +54,3 @@ jobs:
 
       - name: Run helm-docs
         uses: docker://jnorwood/helm-docs:v1.5.0
-
-      - name: Check for changes
-        run: git diff --quiet charts/*/README.md
