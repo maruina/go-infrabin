@@ -93,14 +93,6 @@ func run(cmd *cobra.Command, args []string) {
 	)
 	go server.ListenAndServe()
 
-	// run admin server in background
-	admin := infrabin.NewHTTPServer(
-		"admin",
-		infrabin.RegisterHealth("/healthcheck/liveness/", grpcServer.HealthService),
-		infrabin.RegisterHealth("/healthcheck/readiness/", grpcServer.HealthService),
-	)
-	go admin.ListenAndServe()
-
 	// run Prometheus server
 	promServer := infrabin.NewHTTPServer(
 		"prom",
@@ -111,7 +103,6 @@ func run(cmd *cobra.Command, args []string) {
 	// wait for SIGINT
 	<-finish
 
-	admin.Shutdown()
 	server.Shutdown()
 	grpcServer.Shutdown()
 	promServer.Shutdown()
