@@ -33,7 +33,7 @@ jobs:
 
       - id: lint
         name: Run chart-testing (lint)
-        uses: helm/chart-testing-action@v1.0.0-rc.2
+        uses: helm/chart-testing-action@v2.0.1
         with:
           command: lint
 
@@ -43,7 +43,7 @@ jobs:
         uses: helm/kind-action@v1.1.0
 
       - name: Run chart-testing (install)
-        uses: helm/chart-testing-action@v1.0.0-rc.2
+        uses: helm/chart-testing-action@v2.0.1
         with:
           command: install
 
