@@ -2,9 +2,6 @@ BINARY_NAME=go-infrabin
 
 all: dep test
 
-lint:
-	golangci-lint run
-
 # Run go fmt against code
 fmt:
 	go fmt ./...
@@ -15,7 +12,7 @@ vet:
 
 lint: fmt vet
 
-test: lint
+test: lint protoc
 	go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
 
 protoc:
