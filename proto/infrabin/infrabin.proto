@@ -60,10 +60,10 @@ message Response {
 }
 
 message KubeResponse {
-  string  pod_name = 1;
-  string  namespace = 2;
-  string  pod_ip = 3;
-  string  node_name = 4;
+    string  pod_name = 1;
+    string  namespace = 2;
+    string  pod_ip = 3;
+    string  node_name = 4;
 }
 
 message DelayRequest {
