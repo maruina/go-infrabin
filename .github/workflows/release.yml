@@ -41,7 +41,7 @@ jobs:
       run: make protoc
 
     - name: Get tag
-      uses: olegtarasov/get-tag@v2
+      uses: olegtarasov/get-tag@v2.1
       id: tagName
 
     - name: Run GoReleaser
