@@ -9,9 +9,9 @@ RUN apt-get update && \
     unzip protoc/protoc.zip -d protoc/ && \
     mv protoc/bin/protoc /usr/local/bin/ && \
     mv protoc/include /usr/local
-RUN curl -os /envoy-preflight "https://github.com/monzo/envoy-preflight/releases/download/v1.0/envoy-preflight" && \
+RUN curl -Lso /envoy-preflight "https://github.com/monzo/envoy-preflight/releases/download/v1.0/envoy-preflight" && \
     chmod +x /envoy-preflight && \
-    curl -os /grpc_health_probe "https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64" && \
+    curl -Lso /grpc_health_probe "https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-amd64" && \
     chmod +x /grpc_health_probe
 WORKDIR /go/src/go-infrabin
 COPY . /go/src/go-infrabin
