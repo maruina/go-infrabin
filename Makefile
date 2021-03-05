@@ -12,7 +12,7 @@ vet:
 
 lint: fmt vet
 
-test: lint protoc
+test: protoc lint
 	go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
 
 protoc:
