@@ -60,11 +60,11 @@ spec:
               protocol: TCP
           readinessProbe:
             exec:
-              command: ["/usr/local/bin/grpc-health-probe", "-addr=:{{ .Values.args.gRPCPort }}"]
+              command: ["/usr/local/bin/grpc_health_probe", "-addr=:{{ .Values.args.gRPCPort }}"]
             initialDelaySeconds: 10
           livenessProbe:
             exec:
-              command: ["/usr/local/bin/grpc-health-probe", "-addr=:{{ .Values.args.gRPCPort }}"]
+              command: ["/usr/local/bin/grpc_health_probe", "-addr=:{{ .Values.args.gRPCPort }}"]
             initialDelaySeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
