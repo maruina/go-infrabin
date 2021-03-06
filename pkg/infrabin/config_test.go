@@ -20,9 +20,6 @@ func TestDefaultConfig(t *testing.T) {
 		{"server.host", "0.0.0.0"},
 		{"server.port", "8888"},
 
-		{"admin.host", "0.0.0.0"},
-		{"admin.port", "8889"},
-
 		{"prom.host", "0.0.0.0"},
 		{"prom.port", "8887"},
 
