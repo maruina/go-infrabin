@@ -46,7 +46,7 @@ spec:
             - --http-write-timeout={{ .Values.args.httpWriteTimeout }}
             - --http-read-timeout={{ .Values.args.httpReadTimeout }}
             - --http-idle-timeout={{ .Values.args.httpIdleTimeout }}
-            - --http-read-header-timeout={{ .Values.argshttpReadHeaderTimeout }}
+            - --http-read-header-timeout={{ .Values.args.httpReadHeaderTimeout }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http-service
