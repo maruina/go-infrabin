@@ -32,22 +32,40 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command:
+            - /usr/local/bin/go-infrabin
+            - --grpc-port={{ .Values.args.gRPCPort }}
+            - --server-port={{ .Values.args.serverPort }}
+            - --prom-port={{ .Values.args.promPort }}
+            {{- if .Values.args.enableProxyEndpoint }}
+            - --enable-proxy-endpoint=true
+            {{- end }}
+            - --aws-metadata-endpoint={{ .Values.args.aWSMetadataEndpoint }}
+            - --drain-timeout={{ .Values.args.drainTimeout }}
+            - --max-delay={{ .Values.args.maxDelay }}
+            - --http-write-timeout={{ .Values.args.httpWriteTimeout }}
+            - --http-read-timeout={{ .Values.args.httpReadTimeout }}
+            - --http-idle-timeout={{ .Values.args.httpIdleTimeout }}
+            - --http-read-header-timeout={{ .Values.argshttpReadHeaderTimeout }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http-service
-              containerPort: 8888
+              containerPort: {{ .Values.args.serverPort}}
               protocol: TCP
-            - name: http-admin
-              containerPort: {{ .Values.deployment.adminPort }}
+            - name: grpc-service
+              containerPort: {{ .Values.args.gRPCPort }}
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /healthcheck/liveness/check
-              port: http-admin
+            - name: http-prom
+              containerPort: {{ .Values.args.promPort }}
+              protocol: TCP
           readinessProbe:
-            httpGet:
-              path: /healthcheck/readiness/check
-              port: http-admin
+            exec:
+              command: ["/usr/local/bin/grpc_health_probe", "-addr=:{{ .Values.args.gRPCPort }}"]
+            initialDelaySeconds: 10
+          livenessProbe:
+            exec:
+              command: ["/usr/local/bin/grpc_health_probe", "-addr=:{{ .Values.args.gRPCPort }}"]
+            initialDelaySeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.extraEnv }}

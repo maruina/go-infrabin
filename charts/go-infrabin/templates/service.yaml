@@ -7,9 +7,17 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ .Values.args.serverPort }}
       targetPort: http-service
       protocol: TCP
-      name: http
+      name: http-service
+    - port: {{ .Values.args.gRPCPort }}
+      targetPort: grpc-service
+      protocol: TCP
+      name: grpc-service
+    - port: {{ .Values.args.promPort }}
+      targetPort: http-prom
+      protocol: TCP
+      name: http-prom
   selector:
     {{- include "go-infrabin.selectorLabels" . | nindent 4 }}

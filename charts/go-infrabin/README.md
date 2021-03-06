@@ -59,11 +59,21 @@ helm upgrade quirky-walrus go-infrabin --namespace infrabin --set image.tag=late
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
+| args.aWSMetadataEndpoint | string | `"http://169.254.169.254/latest/meta-data/"` |  |
+| args.drainTimeout | string | `"15s"` |  |
+| args.enableProxyEndpoint | bool | `false` |  |
+| args.gRPCPort | int | `50051` |  |
+| args.httpIdleTimeout | string | `"15s"` |  |
+| args.httpReadHeaderTimeout | string | `"15s"` |  |
+| args.httpReadTimeout | string | `"60s"` |  |
+| args.httpWriteTimeout | string | `"121s"` |  |
+| args.maxDelay | string | `"120s"` |  |
+| args.promPort | int | `8887` |  |
+| args.serverPort | int | `8888` |  |
 | autoscaling.enabled | bool | `false` |  |
 | autoscaling.maxReplicas | int | `100` |  |
 | autoscaling.minReplicas | int | `1` |  |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
-| deployment.adminPort | int | `8889` |  |
 | extraEnv | list | `[]` |  |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |

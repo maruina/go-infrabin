@@ -10,6 +10,19 @@ image:
   # Overrides the image tag whose default is the application version.
   tag: ""
 
+args:
+  gRPCPort: 50051
+  serverPort: 8888
+  promPort: 8887
+  enableProxyEndpoint: false
+  aWSMetadataEndpoint: "http://169.254.169.254/latest/meta-data/"
+  drainTimeout: 15s
+  maxDelay: 120s
+  httpWriteTimeout: 121s
+  httpReadTimeout: 60s
+  httpIdleTimeout: 15s
+  httpReadHeaderTimeout: 15s
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
@@ -39,9 +52,6 @@ securityContext: {}
 service:
   type: ClusterIP
   port: 80
-
-deployment:
-  adminPort: 8889
 
 ingress:
   enabled: false

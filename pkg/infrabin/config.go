@@ -12,7 +12,6 @@ const (
 	DefaultHost                = "0.0.0.0"
 	DefaultGRPCPort       uint = 50051
 	DefaultHTTPServerPort uint = 8888
-	DefaultAdminPort      uint = 8889
 	DefaultPrometheusPort uint = 8887
 	EnableProxyEndpoint        = false
 	AWSMetadataEndpoint        = "http://169.254.169.254/latest/meta-data/"
@@ -53,10 +52,6 @@ func ReadConfiguration() {
 	// http server Defaults
 	viper.SetDefault("server.host", DefaultHost)
 	viper.SetDefault("server.port", DefaultHTTPServerPort)
-
-	// admin Defaults
-	viper.SetDefault("admin.host", DefaultHost)
-	viper.SetDefault("admin.port", DefaultAdminPort)
 
 	// Prometheus Defaults
 	viper.SetDefault("prom.host", DefaultHost)

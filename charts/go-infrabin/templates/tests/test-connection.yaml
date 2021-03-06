@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "go-infrabin.fullname" . }}:{{ .Values.service.port }}']
+      args: ['{{ include "go-infrabin.fullname" . }}:{{ .Values.args.serverPort }}']
   restartPolicy: Never
