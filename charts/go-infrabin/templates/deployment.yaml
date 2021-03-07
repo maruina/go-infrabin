@@ -58,14 +58,14 @@ spec:
             - name: http-prom
               containerPort: {{ .Values.args.promPort }}
               protocol: TCP
-          # readinessProbe:
-          #   exec:
-          #     command: ["/usr/local/bin/grpc_health_probe", "-addr=:{{ .Values.args.gRPCPort }}"]
-          #   initialDelaySeconds: 10
-          # livenessProbe:
-          #   exec:
-          #     command: ["/usr/local/bin/grpc_health_probe", "-addr=:{{ .Values.args.gRPCPort }}"]
-          #   initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http-service
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http-service
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.extraEnv }}
