@@ -12,7 +12,7 @@
 `go-infrabin` exposes three ports:
 
 * `8888` as a http rest port
-* `8899` as the http rest admin port, for liveness and readiness probes
+* `8887` as http Prometheus port
 * `50051` as a grpc port
 
 ## Installation
@@ -47,117 +47,119 @@ See the [README](./chart/go-infrabin/README.md).
 ## Service Endpoints
 
 * _grpc_: `infrabin.Infrabin.Root` _rest_: `GET /`
-    * _grpc request_
-        ```
-        message Empty {}
-        ```
-    * _returns_: a JSON response
-        ```json
-        {
-            "hostname": "<hostname>",
-            "kubernetes": {
-                "pod_name": "<pod_name>",
-                "namespace": "<namespace>",
-                "pod_ip": "<pod_ip>",
-                "node_name": "<node_name>"
-            }
-        }
-        ```
+  * _grpc request_
+
+  ```text
+  message Empty {}
+  ```
+
+  * _returns_: a JSON response
+
+  ```json
+  {
+      "hostname": "<hostname>",
+      "kubernetes": {
+          "pod_name": "<pod_name>",
+          "namespace": "<namespace>",
+          "pod_ip": "<pod_ip>",
+          "node_name": "<node_name>"
+      }
+  }
+  ```
 
 * _grpc_: `infrabin.Infrabin.Delay` _rest_: `GET /delay/<seconds>`
-    * _grpc request_
-        ```
-        message DelayRequest {
-          int32 duration = 1;
-        }
-        ```
-    * _returns_: a JSON response
-        ```json
-        {
-            "delay": "<seconds>"
-        }
-        ```
+  * _grpc request_
+
+  ```text
+  message DelayRequest {
+    int32 duration = 1;
+  }
+  ```
+
+  * _returns_: a JSON response
+
+  ```json
+  {
+      "delay": "<seconds>"
+  }
+  ```
 
 * _grpc_: `infrabin.Infrabin.Headers` _rest_: `GET /headers`
-    * _grpc request_
-        ```
-        message HeadersRequest {
-            map<string, string> headers = 1;
-        }
-        ```
-    * _returns_: a JSON response with [HTTP headers](https://pkg.go.dev/net/http?tab=doc#Header)
-        ```json
-        {
-            "headers": "<request headers>"
-        }
-        ```
+
+  * _grpc request_
+
+  ```text
+  message HeadersRequest {
+      map<string, string> headers = 1;
+  }
+  ```
+
+  * _returns_: a JSON response with [HTTP headers](https://pkg.go.dev/net/http?tab=doc#Header)
+
+  ```json
+  {
+      "headers": "<request headers>"
+  }
+  ```
 
 * _grpc_: `infrabin.Infrabin.Env` _rest_: `GET /env/<env_var>`
-    * _grpc request_
-        ```
-        message EnvRequest {
-            string env_var = 1;
-        }
-        ```
-    * _returns_: a JSON response with the requested `<env_var>` or `404` if the environment variable does not exist
-        ```json
-        {
-            "env": {
-                "<env_var>": "<env_var_value>"
-            }
-        }
-        ```
+  * _grpc request_
+
+  ```text
+  message EnvRequest {
+      string env_var = 1;
+  }
+  ```
+
+  * _returns_: a JSON response with the requested `<env_var>` or `404` if the environment variable does not exist
+
+  ```json
+  {
+      "env": {
+          "<env_var>": "<env_var_value>"
+      }
+  }
+  ```
 
 * _grpc_: `infrabin.Infrabin.Proxy` _rest_: `GET /proxy`
-    * _NOTE_: `--enable-proxy-endpoint` must be set
-    * _grpc request_
-        ```
-        message ProxyRequest {
-            string method = 1;
-            string url = 2;
-            google.protobuf.Struct body = 3;
-            map<string, string> headers = 4;
-        }
-        ```
-    * _returns_:
-        JSON of proxied request
+  * _NOTE_: `--enable-proxy-endpoint` must be set
+  * _grpc request_
+
+  ```text
+  message ProxyRequest {
+      string method = 1;
+      string url = 2;
+      google.protobuf.Struct body = 3;
+      map<string, string> headers = 4;
+  }
+  ```
+
+  * _returns_: JSON of proxied request
 
 * _grpc_: `infrabin.Infrabin.AWS` _rest_: `GET /aws/<path>`
-    * _NOTE_: `--enable-proxy-endpoint` must be set
-    * _grpc request_
-        ```
-        message AWSRequest {
-            string path = 1;
-        }
-        ```
-    * _returns_:
-        JSON of AWS GET call
+  * _NOTE_: `--enable-proxy-endpoint` must be set
+  * _grpc request_
 
-## Admin Endpoints
+  ```text
+  message AWSRequest {
+      string path = 1;
+  }
+  ```
 
-* _grpc_: `infrabin.Infrabin.Liveness` _rest_: `GET /liveness`
-    * _grpc request_
-        ```
-        message Empty {}
-        ```
-    * _returns_: a JSON response if healthy or the status code `503` if unhealthy.
-        ```json
-        {
-            "liveness": "pass"
-        }
-        ```
+  * _returns_: JSON of AWS GET call
 
 ## Errors
 
-When caling the http endpoint, errors are mapped by `grpc-gateway`. They
-have the following format:
-  * _returns_:
-    ```json
-    {
-        "code": 3,
-        "message": "type mismatch, parameter: duration, error: strconv.ParseInt: parsing \"21asd\": invalid syntax"
-    }
-    ```
+When calling the http endpoint, errors are mapped by `grpc-gateway`. They have the following format:
+
+* _returns_:
+
+```json
+{
+    "code": 3,
+    "message": "type mismatch, parameter: duration, error: strconv.ParseInt: parsing \"21asd\": invalid syntax"
+}
+```
 
 ### Contributing
 
@@ -182,8 +184,7 @@ go install \
   google.golang.org/grpc/cmd/protoc-gen-go-grpc
 ```
 
-`make run` will compile the protocol
-buffers, or you can run:
+`make run` will compile the protocol buffers, or you can run:
 
 ```shell
 make protoc

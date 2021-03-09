@@ -11,5 +11,8 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "go-infrabin.fullname" . }}:{{ .Values.service.port }}']
+      args: ['{{ include "go-infrabin.fullname" . }}:{{ .Values.args.serverPort }}']
+    - name: grpc
+      image: maruina/docker-grpc-health-probe:v0.3.1
+      command: ['/bin/grpc_health_probe', '-addr={{ include "go-infrabin.fullname" . }}:{{ .Values.args.gRPCPort }}']
   restartPolicy: Never

@@ -61,7 +61,6 @@ func init() {
 	rootCmd.Flags().IP("server-host", net.ParseIP(infrabin.DefaultHost), "HTTP server host")
 	rootCmd.Flags().Uint("server-port", infrabin.DefaultHTTPServerPort, "HTTP server port")
 	rootCmd.Flags().IP("admin-host", net.ParseIP(infrabin.DefaultHost), "HTTP server host")
-	rootCmd.Flags().Uint("admin-port", infrabin.DefaultAdminPort, "HTTP server port")
 	rootCmd.Flags().IP("prom-host", net.ParseIP(infrabin.DefaultHost), "Prometheus metrics host")
 	rootCmd.Flags().Uint("prom-port", infrabin.DefaultPrometheusPort, "Prometheus metrics port")
 	rootCmd.Flags().Bool("enable-proxy-endpoint", infrabin.EnableProxyEndpoint, "When enabled allows /proxy and /aws endpoints")
@@ -93,14 +92,6 @@ func run(cmd *cobra.Command, args []string) {
 	)
 	go server.ListenAndServe()
 
-	// run admin server in background
-	admin := infrabin.NewHTTPServer(
-		"admin",
-		infrabin.RegisterHealth("/healthcheck/liveness/", grpcServer.HealthService),
-		infrabin.RegisterHealth("/healthcheck/readiness/", grpcServer.HealthService),
-	)
-	go admin.ListenAndServe()
-
 	// run Prometheus server
 	promServer := infrabin.NewHTTPServer(
 		"prom",
@@ -111,7 +102,6 @@ func run(cmd *cobra.Command, args []string) {
 	// wait for SIGINT
 	<-finish
 
-	admin.Shutdown()
 	server.Shutdown()
 	grpcServer.Shutdown()
 	promServer.Shutdown()

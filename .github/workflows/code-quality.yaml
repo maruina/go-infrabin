@@ -23,9 +23,6 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@master
 
-      - name: Get dependencies
-        run: go mod download
-
       - name: Get protoc go binaries
         run: |
           go install \

@@ -12,10 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 
-	"google.golang.org/grpc/health"
-	"google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/protobuf/runtime/protoimpl"
-
 	"github.com/maruina/go-infrabin/internal/helpers"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,14 +23,6 @@ func newHTTPInfrabinHandler() http.Handler {
 	return NewHTTPServer(
 		"test",
 		RegisterInfrabin("/", &InfrabinService{}),
-	).Server.Handler
-}
-
-func newHTTPAdminHandler() http.Handler {
-	return NewHTTPServer(
-		"test-admin",
-		RegisterHealth("/healthcheck/liveness/", health.NewServer()),
-		RegisterHealth("/healthcheck/readiness/", health.NewServer()),
 	).Server.Handler
 }
 
@@ -296,26 +284,6 @@ func TestAWSHandler(t *testing.T) {
 	}
 	if !reflect.DeepEqual(rr.Body.String(), "{}") {
 		t.Errorf("handler returned unexpected body: got %v want {}", rr.Body.String())
-	}
-}
-
-func TestHealthHandler(t *testing.T) {
-	req := httptest.NewRequest("GET", "/healthcheck/liveness/check", nil)
-
-	rr := httptest.NewRecorder()
-	handler := newHTTPAdminHandler()
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
-
-	expected := grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}
-	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
-	data, _ := marshalOptions.Marshal(protoimpl.X.ProtoMessageV2Of(&expected))
-
-	if rr.Body.String() != string(data) {
-		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), string(data))
 	}
 }
 

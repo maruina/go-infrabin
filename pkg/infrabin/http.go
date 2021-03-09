@@ -8,31 +8,17 @@ import (
 	"strings"
 
 	"github.com/gorilla/handlers"
-	grpc_health_v1 "github.com/maruina/go-infrabin/pkg/grpc/health/v1"
 	"github.com/spf13/viper"
-	"google.golang.org/grpc/health"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
 
-type HTTPServerOption func(ctx context.Context, s *HTTPServer)
-
-func RegisterHealth(pattern string, healthService *health.Server) HTTPServerOption {
-	return func(ctx context.Context, s *HTTPServer) {
-		// Register the handler to call local instance, i.e. no network calls
-		mux := newGatewayMux()
-		if err := grpc_health_v1.RegisterHealthHandlerServer(ctx, mux, healthService); err != nil {
-			log.Fatalf("gRPC server failed to register: %v", err)
-		}
-		var handler http.Handler
-		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
-			handler = http.StripPrefix(p, mux)
-		} else {
-			handler = mux
-		}
-		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
-	}
+type HTTPServer struct {
+	Name   string
+	Server *http.Server
 }
+
+type HTTPServerOption func(ctx context.Context, s *HTTPServer)
 
 func RegisterInfrabin(pattern string, infrabinService InfrabinServer) HTTPServerOption {
 	return func(ctx context.Context, s *HTTPServer) {
@@ -58,11 +44,6 @@ func RegisterHandler(pattern string, handler http.Handler) HTTPServerOption {
 		}
 		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
 	}
-}
-
-type HTTPServer struct {
-	Name   string
-	Server *http.Server
 }
 
 func (s *HTTPServer) ListenAndServe() {
