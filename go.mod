@@ -13,6 +13,6 @@ require (
 	github.com/spf13/viper v1.7.1
 	google.golang.org/genproto v0.0.0-20210318145829-90b20ab00860
 	google.golang.org/grpc v1.36.1
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.37.0
 	google.golang.org/protobuf v1.25.1-0.20201208041424-160c7477e0e8
 )
