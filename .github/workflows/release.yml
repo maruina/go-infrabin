@@ -25,12 +25,7 @@ jobs:
       uses: arduino/setup-protoc@master
 
     - name: Get protoc go binaries
-      run: |
-        go install \
-          github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
-          github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
-          google.golang.org/protobuf/cmd/protoc-gen-go \
-          google.golang.org/grpc/cmd/protoc-gen-go-grpc
+      run: make tools
 
     - name: Genereate code for infrabin protofile
       run: make protoc
@@ -50,3 +45,11 @@ jobs:
       with:
         push: true
         tags: maruina/go-infrabin:${{ steps.tagName.outputs.tag }}
+
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v2
+      with:
+        version: latest
+        args: release --rm-dist
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
