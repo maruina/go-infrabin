@@ -2,6 +2,10 @@ BINARY_NAME=go-infrabin
 
 all: dep test
 
+.PHONY: tools
+tools:
+	go generate -tags tools tools/tools.go
+
 # Run go fmt against code
 fmt:
 	go fmt ./...
