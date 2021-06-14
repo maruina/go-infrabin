@@ -11,6 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+
 	"google.golang.org/grpc/metadata"
 
 	"google.golang.org/grpc/codes"
@@ -21,9 +24,16 @@ import (
 	"github.com/spf13/viper"
 )
 
+var servingStatusMap = map[string]grpc_health_v1.HealthCheckResponse_ServingStatus{
+	"fail": grpc_health_v1.HealthCheckResponse_NOT_SERVING,
+	"pass": grpc_health_v1.HealthCheckResponse_SERVING,
+}
+
 // Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
 type InfrabinService struct {
 	UnimplementedInfrabinServer
+	LivenessHealthService  *health.Server
+	ReadinessHealthService *health.Server
 }
 
 func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error) {
@@ -131,4 +141,59 @@ func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*struct
 	}
 	u.Path = request.Path
 	return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: u.String()})
+}
+
+func (s *InfrabinService) SetServingStatus(ctx context.Context, request *SetServingStatusMessage) (*SetServingStatusMessage, error) {
+	if servingStatus, ok := servingStatusMap[request.Status]; ok {
+		if request.Probe == "liveness" {
+			// Set the root and infrabin.Infrabin health
+			s.LivenessHealthService.SetServingStatus("", servingStatus)
+			s.LivenessHealthService.SetServingStatus("infrabin.Infrabin", servingStatus)
+		} else if request.Probe == "readiness" {
+			// Set the root and infrabin.Infrabin health
+			s.ReadinessHealthService.SetServingStatus("", servingStatus)
+			s.ReadinessHealthService.SetServingStatus("infrabin.Infrabin", servingStatus)
+		}
+		return request, nil
+	} else {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid SetServingStatusMessage")
+	}
+}
+
+func (s *InfrabinService) WatchInfo(request *WatchInfoRequest, stream Infrabin_WatchInfoServer) error {
+	// Get the interval in seconds or use a sensible default
+	interval := time.Duration(request.Interval) * time.Second
+	if interval == time.Duration(0) {
+		interval = time.Second
+	}
+	ticker := time.NewTicker(interval)
+	// Use the Root handler for the response. Cache it before streaming
+	response, err := s.Root(stream.Context(), &Empty{})
+	if err != nil {
+		return err
+	}
+	// Send initial response instantly
+	if err := stream.Send(response); err != nil {
+		return err
+	}
+	// Loop forever or until we have hit NumMessages
+	var i int32 = 1
+	for {
+		select {
+		case <-ticker.C:
+			// Return a response and close stream if reached limit
+			if err := stream.Send(response); err != nil {
+				return err
+			}
+			i++
+			if request.NumMessages != 0 && i >= request.NumMessages {
+				ticker.Stop()
+				return nil
+			}
+		case <-stream.Context().Done():
+			// If the stream is stopped closed it gracefully
+			ticker.Stop()
+			return nil
+		}
+	}
 }

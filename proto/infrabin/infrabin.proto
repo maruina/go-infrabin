@@ -4,6 +4,7 @@ package infrabin;
 
 import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
+import "grpc/health/v1/health.proto";
 
 option go_package = "github.com/maruina/go-infrabin/pkg/infrabin";
 
@@ -37,6 +38,12 @@ service Infrabin {
             get: "/aws/{path=**}"
         };
     }
+    rpc SetServingStatus(SetServingStatusMessage) returns (SetServingStatusMessage) {
+        option (google.api.http) = {
+            post: "/healthcheck/{probe}/{status}"
+        };
+    }
+    rpc WatchInfo(WatchInfoRequest) returns (stream Response) {};
 
     rpc Root(Empty) returns (Response) {
         option (google.api.http) = {
@@ -87,4 +94,14 @@ message ProxyRequest {
 
 message AWSRequest {
     string path = 1;
+}
+
+message SetServingStatusMessage {
+    string probe = 1;
+    string status = 2;
+}
+
+message WatchInfoRequest {
+    int32 num_messages = 1;
+    int32 interval = 2;
 }
