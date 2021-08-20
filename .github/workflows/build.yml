@@ -39,7 +39,7 @@ jobs:
         ignore: pkg/infrabin/infrabin.pb.go,pkg/infrabin/infrabin.pb.gw.go,pkg/infrabin/infrabin_grpc.pb.go
 
     - name: Build docker image on PR
-      uses: docker/build-push-action@v2.6.1
+      uses: docker/build-push-action@v2.7.0
       with:
         tags: maruina/go-infrabin:latest
         push: false
@@ -52,7 +52,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Build and push latest docker image on master
-      uses: docker/build-push-action@v2.6.1
+      uses: docker/build-push-action@v2.7.0
       with:
         push: true
         tags: maruina/go-infrabin:latest
