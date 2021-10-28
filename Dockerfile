@@ -19,7 +19,7 @@ RUN make tools && \
     make test && \
     make build
 
-FROM gcr.io/distroless/base-debian10@sha256:aff0b0d6766cce25bd47bacb3ed67ae866952585c0735ff3bdb70fdfeac8992a
+FROM gcr.io/distroless/base-debian10@sha256:d2ce069a83a6407e98c7e0844f4172565f439dab683157bf93b6de20c5b46155
 COPY --from=builder /go/src/go-infrabin/go-infrabin /usr/local/bin/go-infrabin
 COPY --from=builder /envoy-preflight /envoy-preflight
 COPY --from=builder /grpc_health_probe /usr/local/bin/grpc_health_probe
