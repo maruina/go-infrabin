@@ -21,8 +21,6 @@ See the [README](./chart/go-infrabin/README.md).
 
 ## Command line flags
 
-* `--admin-host`: HTTP server host (default `0.0.0.0`)
-* `--admin-port`: HTTP server port (default `8889`)
 * `--aws-metadata-endpoint`: AWS Metadata Endpoint (default `http://169.254.169.254/latest/meta-data/`)
 * `--drain-timeout`: Drain timeout (default `15s`)
 * `--enable-proxy-endpoint`: When enabled allows `/proxy` and `/aws` endpoints
@@ -147,6 +145,16 @@ See the [README](./chart/go-infrabin/README.md).
   ```
 
   * _returns_: JSON of AWS GET call
+
+* _grpc_: `infrabin.Infrabin.Any` _rest_: `GET /any/<path>`
+
+  ```text
+  message Any {
+      string path = 1;
+  }
+  ```
+
+  * _returns_: JSON of the requested path
 
 ## Errors
 
