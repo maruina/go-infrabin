@@ -43,6 +43,12 @@ service Infrabin {
             get: "//"
         };
     }
+
+    rpc Any(AnyRequest) returns (Response) {
+        option (google.api.http) = {
+            get: "/any/{path=**}"
+        };
+    }
 }
 
 
@@ -57,6 +63,7 @@ message Response {
 	string              error        = 5;
 	map<string, string> headers      = 6;
 	map<string, string> env          = 7;
+    string path = 8;
 }
 
 message KubeResponse {
@@ -86,5 +93,9 @@ message ProxyRequest {
 }
 
 message AWSRequest {
+    string path = 1;
+}
+
+message AnyRequest {
     string path = 1;
 }

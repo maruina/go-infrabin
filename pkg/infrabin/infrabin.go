@@ -132,3 +132,7 @@ func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*struct
 	u.Path = request.Path
 	return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: u.String()})
 }
+
+func (s *InfrabinService) Any(ctx context.Context, request *AnyRequest) (*Response, error) {
+	return &Response{Path: request.Path}, nil
+}
