@@ -24,8 +24,6 @@ var (
 				"grpc.port":             "grpc-port",
 				"server.host":           "server-host",
 				"server.port":           "server-port",
-				"admin.host":            "admin-host",
-				"admin.port":            "admin-port",
 				"prom.host":             "prom-host",
 				"prom.port":             "prom-port",
 				"proxyEndpoint":         "enable-proxy-endpoint",
@@ -60,7 +58,6 @@ func init() {
 	rootCmd.Flags().Uint("grpc-port", infrabin.DefaultGRPCPort, "gRPC port")
 	rootCmd.Flags().IP("server-host", net.ParseIP(infrabin.DefaultHost), "HTTP server host")
 	rootCmd.Flags().Uint("server-port", infrabin.DefaultHTTPServerPort, "HTTP server port")
-	rootCmd.Flags().IP("admin-host", net.ParseIP(infrabin.DefaultHost), "HTTP server host")
 	rootCmd.Flags().IP("prom-host", net.ParseIP(infrabin.DefaultHost), "Prometheus metrics host")
 	rootCmd.Flags().Uint("prom-port", infrabin.DefaultPrometheusPort, "Prometheus metrics port")
 	rootCmd.Flags().Bool("enable-proxy-endpoint", infrabin.EnableProxyEndpoint, "When enabled allows /proxy and /aws endpoints")
