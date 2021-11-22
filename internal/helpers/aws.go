@@ -13,7 +13,7 @@ import (
 
 // STSAssumeRoleAPI defines the interface for the AssumeRole function.
 // We use this interface to test the function using a mocked service.
-type STSAssumeRoleAPI interface {
+type STSApi interface {
 	AssumeRole(ctx context.Context,
 		params *sts.AssumeRoleInput,
 		optFns ...func(*sts.Options)) (*sts.AssumeRoleOutput, error)
@@ -27,7 +27,7 @@ type STSAssumeRoleAPI interface {
 // Output:
 //     If successful, an AssumeRoleOutput object containing the result of the service call and nil.
 //     Otherwise, nil and an error from the call to AssumeRole.
-func TakeRole(c context.Context, api STSAssumeRoleAPI, input *sts.AssumeRoleInput) (*sts.AssumeRoleOutput, error) {
+func TakeRole(c context.Context, api STSApi, input *sts.AssumeRoleInput) (*sts.AssumeRoleOutput, error) {
 	return api.AssumeRole(c, input)
 }
 

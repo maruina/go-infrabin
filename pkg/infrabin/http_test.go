@@ -322,7 +322,7 @@ func TestAnyHandler(t *testing.T) {
 }
 
 func TestAssumeHandler(t *testing.T) {
-	req := httptest.NewRequest("GET", "/aws/assume/ARN", nil)
+	req := httptest.NewRequest("GET", "/aws/assume/arn:aws:iam::123456789012:role/xaccounts3access", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
