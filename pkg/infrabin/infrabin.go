@@ -3,6 +3,7 @@ package infrabin
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -122,15 +123,40 @@ func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*st
 }
 
 func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*structpb.Struct, error) {
+	// Error checks
 	if request.Path == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "Path must not be empty")
 	}
+
 	u, err := url.Parse(viper.GetString("awsMetadataEndpoint"))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "s.Config.AWSMetadataEndpoint invalid: %v", err)
 	}
-	u.Path = request.Path
-	return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: u.String()})
+
+	// If calling the metadata endpoint
+	if strings.HasPrefix(request.Path, "metadata") {
+		u.Path = request.Path
+		return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: u.String()})
+	}
+
+	// If calling to assume a role
+	if strings.HasPrefix(request.Path, "assume") {
+		roleArn := strings.TrimPrefix(request.Path, "assume/")
+		fmt.Printf("roleArn is: %v\n", roleArn)
+		roleId, err := helpers.AssumeRole(ctx, roleArn, "aws-assume-session-go-infrabin")
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Error assuming AWS IAM role, %v", err)
+		}
+		responseMap, err := structpb.NewValue(map[string]interface{}{
+			"assumedRoleId": roleId,
+		})
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Error creating reponse with AWS AssumedRoleId %v. Got %v", roleId, err)
+		}
+		return structpb.NewStruct(responseMap.GetStructValue().AsMap())
+	}
+
+	return nil, status.Errorf(codes.InvalidArgument, "Supported paths are /aws/metadata or /aws/assume, got %v", request.Path)
 }
 
 func (s *InfrabinService) Any(ctx context.Context, request *AnyRequest) (*Response, error) {

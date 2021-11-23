@@ -34,13 +34,13 @@ func TakeRole(c context.Context, api STSApi, input *sts.AssumeRoleInput) (*sts.A
 func AssumeRole(ctx context.Context, role string, session string) (string, error) {
 
 	if role == "" {
-		return "", fmt.Errorf("")
+		return "", fmt.Errorf("role %v is empty", role)
 	}
 	if !arn.IsARN(role) {
-		return "", fmt.Errorf("")
+		return "", fmt.Errorf("role %v is not a valid ARN", role)
 	}
 	if session == "" {
-		return "", fmt.Errorf("")
+		return "", fmt.Errorf("session %v is empty", session)
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -60,5 +60,5 @@ func AssumeRole(ctx context.Context, role string, session string) (string, error
 		return "", err
 	}
 
-	return *result.AssumedRoleUser.Arn, nil
+	return *result.AssumedRoleUser.AssumedRoleId, nil
 }

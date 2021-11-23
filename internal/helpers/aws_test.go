@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	fakeArn             = "arn:aws:sts::123456789012:assumed-role/xaccounts3access/s3-access-example"
+	fakeArn             = "arn:aws:iam::123456789012:role/my_role"
 	fakeSession         = "s3-access-example"
 	fakeAssumedRoleId   = "AROA3XFRBF535PLBIFPI4:s3-access-example"
 	fakeSecretAccessKey = "9drTJvcXLB89EXAMPLELB8923FB892xMFI"
