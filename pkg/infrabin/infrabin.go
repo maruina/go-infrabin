@@ -123,10 +123,9 @@ func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*st
 	return &response, nil
 }
 
-func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*structpb.Struct, error) {
-	// Error checks
+func (s *InfrabinService) AWSMetadata(ctx context.Context, request *AWSMetadataRequest) (*structpb.Struct, error) {
 	if request.Path == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Path must not be empty")
+		return nil, status.Errorf(codes.InvalidArgument, "path must not be empty")
 	}
 
 	u, err := url.Parse(viper.GetString("awsMetadataEndpoint"))
@@ -134,32 +133,23 @@ func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*struct
 		return nil, status.Errorf(codes.Internal, "s.Config.AWSMetadataEndpoint invalid: %v", err)
 	}
 
-	// If calling the metadata endpoint
-	if strings.HasPrefix(request.Path, "metadata") {
-		u.Path = request.Path
-		return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: u.String()})
-	}
-
-	// If calling to assume a role
-	if strings.HasPrefix(request.Path, "assume") {
-		roleArn := strings.TrimPrefix(request.Path, "assume/")
-		roleId, err := aws.STSAssumeRole(ctx, s.STSClient, roleArn, "aws-assume-session-go-infrabin")
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Error assuming AWS IAM role, %v", err)
-		}
-
-		responseMap, err := structpb.NewValue(map[string]interface{}{
-			"assumedRoleId": roleId,
-		})
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Error creating reponse with AWS AssumedRoleId %v, %v", roleId, err)
-		}
-		return structpb.NewStruct(responseMap.GetStructValue().AsMap())
-	}
-
-	return nil, status.Errorf(codes.InvalidArgument, "Supported paths are /aws/metadata or /aws/assume, got %v", request.Path)
+	u.Path = request.Path
+	return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: u.String()})
 }
 
 func (s *InfrabinService) Any(ctx context.Context, request *AnyRequest) (*Response, error) {
 	return &Response{Path: request.Path}, nil
+}
+
+func (s *InfrabinService) AWSAssume(ctx context.Context, request *AWSAssumeRequest) (*Response, error) {
+	if request.Role == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "role must not be empty")
+	}
+
+	roleId, err := aws.STSAssumeRole(ctx, s.STSClient, request.Role, "aws-assume-session-go-infrabin")
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Error assuming AWS IAM role, %v", err)
+	}
+
+	return &Response{AssumedRoleId: roleId}, nil
 }
