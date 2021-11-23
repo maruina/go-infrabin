@@ -341,3 +341,27 @@ func TestAWSAssumeHandler(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want %s", rr.Body.String(), responseString)
 	}
 }
+
+func TestAWSAssumeHandlerWithEmptyRole(t *testing.T) {
+	req := httptest.NewRequest("GET", "/aws/assume/", nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusBadRequest)
+	}
+}
+
+func TestAWSAssumeHandlerWithInvalidRole(t *testing.T) {
+	req := httptest.NewRequest("GET", "/aws/assume/bad_role", nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusInternalServerError)
+	}
+}
