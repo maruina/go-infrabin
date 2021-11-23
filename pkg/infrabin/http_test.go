@@ -3,6 +3,7 @@ package infrabin
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -264,7 +265,7 @@ func TestProxyHandler(t *testing.T) {
 	}
 }
 
-func TestAWSHandlerMetadata(t *testing.T) {
+func TestAWSMetadataHandler(t *testing.T) {
 
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -321,5 +322,21 @@ func TestAnyHandler(t *testing.T) {
 	}
 	if rr.Code != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+}
+
+func TestAWSAssumeHandler(t *testing.T) {
+	arn := "arn:aws:sts::123456789012:assumed-role/xaccounts3access/s3-access-example"
+	req := httptest.NewRequest("GET", fmt.Sprintf("/aws/assume/%s", arn), nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+	if !reflect.DeepEqual(rr.Body.String(), "{\"assumedRoleId\":\"AROA3XFRBF535PLBIFPI4:s3-access-example\"}") {
+		t.Errorf("handler returned unexpected body: got %v want {}", rr.Body.String())
 	}
 }

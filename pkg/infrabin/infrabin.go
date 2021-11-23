@@ -3,7 +3,6 @@ package infrabin
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -144,14 +143,11 @@ func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*struct
 	// If calling to assume a role
 	if strings.HasPrefix(request.Path, "assume") {
 		roleArn := strings.TrimPrefix(request.Path, "assume/")
-		fmt.Printf("roleArn is: %v\n", roleArn)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Error creating AWS client, %v", err)
-		}
 		roleId, err := aws.STSAssumeRole(ctx, s.STSClient, roleArn, "aws-assume-session-go-infrabin")
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Error assuming AWS IAM role, %v", err)
 		}
+
 		responseMap, err := structpb.NewValue(map[string]interface{}{
 			"assumedRoleId": roleId,
 		})

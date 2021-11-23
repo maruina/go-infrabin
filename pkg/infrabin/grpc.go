@@ -76,7 +76,7 @@ func NewGRPCServer() *GRPCServer {
 	healthServer := health.NewServer()
 	stsClient, err := aws.GetSTSClient()
 	if err != nil {
-		log.Fatalf("Failed to create AWS STS client, %v", err)
+		log.Fatalf("failed to create the AWS STS client, %v", err)
 	}
 	infrabinService := &InfrabinService{
 		STSClient: stsClient,

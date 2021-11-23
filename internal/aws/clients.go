@@ -21,11 +21,11 @@ const (
 	fakeAccessKeyId     = "ASIAJEXAMPLEXEG2JICEA"
 )
 
-type FakeSTSClient struct{}
-
 func timeNow() time.Time {
 	return time.Date(2020, 11, 12, 0, 0, 0, 0, time.UTC)
 }
+
+type FakeSTSClient struct{}
 
 func (f FakeSTSClient) AssumeRole(ctx context.Context, params *sts.AssumeRoleInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleOutput, error) {
 
