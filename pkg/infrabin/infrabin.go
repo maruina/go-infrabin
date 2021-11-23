@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"github.com/maruina/go-infrabin/internal/aws"
 	"github.com/maruina/go-infrabin/internal/helpers"
 	"github.com/spf13/viper"
 )
@@ -25,6 +26,7 @@ import (
 // Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
 type InfrabinService struct {
 	UnimplementedInfrabinServer
+	STSClient aws.STSApi
 }
 
 func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error) {
@@ -143,7 +145,10 @@ func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*struct
 	if strings.HasPrefix(request.Path, "assume") {
 		roleArn := strings.TrimPrefix(request.Path, "assume/")
 		fmt.Printf("roleArn is: %v\n", roleArn)
-		roleId, err := helpers.AssumeRole(ctx, roleArn, "aws-assume-session-go-infrabin")
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Error creating AWS client, %v", err)
+		}
+		roleId, err := aws.STSAssumeRole(ctx, s.STSClient, roleArn, "aws-assume-session-go-infrabin")
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Error assuming AWS IAM role, %v", err)
 		}
@@ -151,7 +156,7 @@ func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*struct
 			"assumedRoleId": roleId,
 		})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Error creating reponse with AWS AssumedRoleId %v. Got %v", roleId, err)
+			return nil, status.Errorf(codes.Internal, "Error creating reponse with AWS AssumedRoleId %v, %v", roleId, err)
 		}
 		return structpb.NewStruct(responseMap.GetStructValue().AsMap())
 	}

@@ -80,7 +80,8 @@ func ReadConfiguration() {
 			// Will just use the default configuration.
 		} else {
 			// Config file was found but another error was produced, so we will exit.
-			panic(fmt.Errorf("Fatal error config file: %s", err))
+			panic(fmt.Errorf("fatal error config file: %s", err))
+
 		}
 	}
 }

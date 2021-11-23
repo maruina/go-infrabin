@@ -6,6 +6,7 @@ import (
 	"net"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/maruina/go-infrabin/internal/aws"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -73,7 +74,13 @@ func NewGRPCServer() *GRPCServer {
 
 	// Create the gPRC services
 	healthServer := health.NewServer()
-	infrabinService := &InfrabinService{}
+	stsClient, err := aws.GetSTSClient()
+	if err != nil {
+		log.Fatalf("Failed to create AWS STS client, %v", err)
+	}
+	infrabinService := &InfrabinService{
+		STSClient: stsClient,
+	}
 
 	// Register gRPC services on the grpc server
 	RegisterInfrabinServer(gs, infrabinService)

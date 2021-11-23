@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 
+	"github.com/maruina/go-infrabin/internal/aws"
 	"github.com/maruina/go-infrabin/internal/helpers"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,7 +23,9 @@ import (
 func newHTTPInfrabinHandler() http.Handler {
 	return NewHTTPServer(
 		"test",
-		RegisterInfrabin("/", &InfrabinService{}),
+		RegisterInfrabin("/", &InfrabinService{
+			STSClient: aws.FakeSTSClient{},
+		}),
 	).Server.Handler
 }
 
