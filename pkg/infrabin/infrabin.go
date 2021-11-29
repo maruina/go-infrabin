@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"github.com/maruina/go-infrabin/internal/aws"
 	"github.com/maruina/go-infrabin/internal/helpers"
 	"github.com/spf13/viper"
 )
@@ -24,6 +25,7 @@ import (
 // Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
 type InfrabinService struct {
 	UnimplementedInfrabinServer
+	STSClient aws.STSApi
 }
 
 func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error) {
@@ -121,18 +123,33 @@ func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*st
 	return &response, nil
 }
 
-func (s *InfrabinService) AWS(ctx context.Context, request *AWSRequest) (*structpb.Struct, error) {
+func (s *InfrabinService) AWSMetadata(ctx context.Context, request *AWSMetadataRequest) (*structpb.Struct, error) {
 	if request.Path == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "Path must not be empty")
+		return nil, status.Errorf(codes.InvalidArgument, "path must not be empty")
 	}
+
 	u, err := url.Parse(viper.GetString("awsMetadataEndpoint"))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "s.Config.AWSMetadataEndpoint invalid: %v", err)
 	}
+
 	u.Path = request.Path
 	return s.Proxy(ctx, &ProxyRequest{Method: "GET", Url: u.String()})
 }
 
 func (s *InfrabinService) Any(ctx context.Context, request *AnyRequest) (*Response, error) {
 	return &Response{Path: request.Path}, nil
+}
+
+func (s *InfrabinService) AWSAssume(ctx context.Context, request *AWSAssumeRequest) (*Response, error) {
+	if request.Role == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "role must not be empty")
+	}
+
+	roleId, err := aws.STSAssumeRole(ctx, s.STSClient, request.Role, "aws-assume-session-go-infrabin")
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Error assuming AWS IAM role, %v", err)
+	}
+
+	return &Response{AssumedRoleId: roleId}, nil
 }

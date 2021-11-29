@@ -3,6 +3,7 @@ package infrabin
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 
+	"github.com/maruina/go-infrabin/internal/aws"
 	"github.com/maruina/go-infrabin/internal/helpers"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,7 +24,9 @@ import (
 func newHTTPInfrabinHandler() http.Handler {
 	return NewHTTPServer(
 		"test",
-		RegisterInfrabin("/", &InfrabinService{}),
+		RegisterInfrabin("/", &InfrabinService{
+			STSClient: aws.FakeSTSClient{},
+		}),
 	).Server.Handler
 }
 
@@ -261,7 +265,7 @@ func TestProxyHandler(t *testing.T) {
 	}
 }
 
-func TestAWSHandler(t *testing.T) {
+func TestAWSMetadataHandler(t *testing.T) {
 
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -273,7 +277,7 @@ func TestAWSHandler(t *testing.T) {
 	viper.Set("proxyEndpoint", true)
 	viper.Set("awsMetadataEndpoint", mockServer.URL)
 
-	req := httptest.NewRequest("GET", "/aws/foo", nil)
+	req := httptest.NewRequest("GET", "/aws/metadata/foo", nil)
 
 	rr := httptest.NewRecorder()
 	handler := newHTTPInfrabinHandler()
@@ -318,5 +322,46 @@ func TestAnyHandler(t *testing.T) {
 	}
 	if rr.Code != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+}
+
+func TestAWSAssumeHandler(t *testing.T) {
+	arn := "arn:aws:sts::123456789012:assumed-role/xaccounts3access/s3-access-example"
+	req := httptest.NewRequest("GET", fmt.Sprintf("/aws/assume/%s", arn), nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+	responseString := "{\"assumedRoleId\":\"AROA3XFRBF535PLBIFPI4:s3-access-example\"}"
+	if !reflect.DeepEqual(rr.Body.String(), responseString) {
+		t.Errorf("handler returned unexpected body: got %v want %s", rr.Body.String(), responseString)
+	}
+}
+
+func TestAWSAssumeHandlerWithEmptyRole(t *testing.T) {
+	req := httptest.NewRequest("GET", "/aws/assume/", nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusBadRequest)
+	}
+}
+
+func TestAWSAssumeHandlerWithInvalidRole(t *testing.T) {
+	req := httptest.NewRequest("GET", "/aws/assume/bad_role", nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusInternalServerError)
 	}
 }

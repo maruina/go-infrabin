@@ -32,9 +32,9 @@ service Infrabin {
             body: "*"
         };
     }
-    rpc AWS(AWSRequest) returns (google.protobuf.Struct) {
+    rpc AWSMetadata(AWSMetadataRequest) returns (google.protobuf.Struct) {
         option (google.api.http) = {
-            get: "/aws/{path=**}"
+            get: "/aws/metadata/{path=**}"
         };
     }
 
@@ -47,6 +47,12 @@ service Infrabin {
     rpc Any(AnyRequest) returns (Response) {
         option (google.api.http) = {
             get: "/any/{path=**}"
+        };
+    }
+
+    rpc AWSAssume(AWSAssumeRequest) returns (Response) {
+        option (google.api.http) = {
+            get: "/aws/assume/{role=**}"
         };
     }
 }
@@ -64,6 +70,7 @@ message Response {
 	map<string, string> headers      = 6;
 	map<string, string> env          = 7;
     string path = 8;
+    string assumedRoleId = 9;
 }
 
 message KubeResponse {
@@ -92,10 +99,14 @@ message ProxyRequest {
     map<string, string> headers = 4;
 }
 
-message AWSRequest {
+message AWSMetadataRequest {
     string path = 1;
 }
 
 message AnyRequest {
     string path = 1;
+}
+
+message AWSAssumeRequest {
+    string role = 1;
 }
