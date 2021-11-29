@@ -156,7 +156,7 @@ See the [README](./chart/go-infrabin/README.md).
 
   * _returns_: JSON of the requested path
 
-* _grpc_: `infrabin.Infrabin.AWSAssume` _rest_: `GET /aws/assume/<path>`
+* _grpc_: `infrabin.Infrabin.AWSAssume` _rest_: `GET /aws/assume/<role>`
   * _grpc request_
 
   ```text
@@ -166,6 +166,12 @@ See the [README](./chart/go-infrabin/README.md).
   ```
 
   * _returns_: JSON with the AssumedRoleId from AWS
+
+  ```json
+  {
+    "assumedRoleId":"AROAITQZVNCXXXXXXXXXX:aws-assume-session-go-infrabin"
+  }
+  ```
 
 ## Errors
 
