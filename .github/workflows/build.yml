@@ -20,6 +20,12 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2.4.0
 
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+    -
+      name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
     - name: Install Protoc
       uses: arduino/setup-protoc@master
 
@@ -51,11 +57,29 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
+    - name: Login to GitHub Packages
+      uses: docker/login-action@v1.10.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Build and push latest docker image on master
       uses: docker/build-push-action@v2.7.0
       with:
         push: true
-        tags: maruina/go-infrabin:latest
+        platforms: linux/amd64,linux/arm64
+        tags: |
+          docker.io/maruina/go-infrabin:latest
+          ghcr.io/maruina/go-infrabin:latest
+      if: github.event_name	== 'push'
+
+    - name: Check images
+      run: |
+        docker buildx imagetools inspect docker.io/maruina/go-infrabin:latest
+        docker buildx imagetools inspect ghcr.io/maruina/go-infrabin:latest
+        docker pull docker.io/maruina/go-infrabin:latest
+        docker pull ghcr.io/maruina/go-infrabin:latest
       if: github.event_name	== 'push'
 
     - name: Test GoReleaser
