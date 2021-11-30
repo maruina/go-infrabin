@@ -2,6 +2,23 @@ apiVersion: v1
 entries:
   go-infrabin:
   - apiVersion: v2
+    appVersion: v3.0.0
+    created: "2021-11-30T09:09:11.405922045Z"
+    description: A Helm chart for Kubernetes installation of go-infrabin - infrabin
+      written in go
+    digest: a4bd530a4f1ad01896a207756f89295aed0770de0d03f48393d178d9f2e756f9
+    home: https://github.com/maruina/go-infrabin
+    maintainers:
+    - name: maruina
+    - name: smirl
+    name: go-infrabin
+    sources:
+    - https://github.com/maruin/go-infrabin/tree/master
+    type: application
+    urls:
+    - https://github.com/maruina/go-infrabin/releases/download/go-infrabin-2.0.1/go-infrabin-2.0.1.tgz
+    version: 2.0.1
+  - apiVersion: v2
     appVersion: v2.0.0
     created: "2021-03-09T21:26:44.57815702Z"
     description: A Helm chart for Kubernetes installation of go-infrabin - infrabin
@@ -52,4 +69,4 @@ entries:
     urls:
     - https://github.com/maruina/go-infrabin/releases/download/go-infrabin-0.2.0/go-infrabin-0.2.0.tgz
     version: 0.2.0
-generated: "2021-03-09T21:26:44.57817502Z"
+generated: "2021-11-30T09:09:11.405943445Z"
