@@ -11,7 +11,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0
 	github.com/onsi/gomega v1.17.0
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.12.0
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.0
 	google.golang.org/genproto v0.0.0-20220118154757-00ab72f36ad5
