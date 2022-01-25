@@ -14,6 +14,7 @@ type STSApi interface {
 	AssumeRole(ctx context.Context,
 		params *sts.AssumeRoleInput,
 		optFns ...func(*sts.Options)) (*sts.AssumeRoleOutput, error)
+	GetCallerIdentity(ctx context.Context, params *sts.GetCallerIdentityInput, optFns ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error)
 }
 
 func STSAssumeRole(ctx context.Context, client STSApi, role string, session string) (string, error) {
@@ -39,4 +40,13 @@ func STSAssumeRole(ctx context.Context, client STSApi, role string, session stri
 	}
 
 	return *result.AssumedRoleUser.AssumedRoleId, nil
+}
+
+func STSGetCallerIdentity(ctx context.Context, client STSApi) (sts.GetCallerIdentityOutput, error) {
+	input := &sts.GetCallerIdentityInput{}
+	result, err := client.GetCallerIdentity(ctx, input)
+	if err != nil {
+		return sts.GetCallerIdentityOutput{}, err
+	}
+	return *result, nil
 }

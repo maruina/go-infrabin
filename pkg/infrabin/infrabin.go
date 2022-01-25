@@ -153,3 +153,18 @@ func (s *InfrabinService) AWSAssume(ctx context.Context, request *AWSAssumeReque
 
 	return &Response{AssumedRoleId: roleId}, nil
 }
+
+func (s *InfrabinService) AWSGetCallerIdentity(ctx context.Context, _ *Empty) (*Response, error) {
+	response, err := aws.STSGetCallerIdentity(ctx, s.STSClient)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Error calling AWS Get Caller Identity, %v", err)
+	}
+
+	return &Response{
+		GetCallerIdentidy: &GetCallerIdentityResponse{
+			Account: *response.Account,
+			Arn:     *response.Arn,
+			UserId:  *response.UserId,
+		},
+	}, nil
+}

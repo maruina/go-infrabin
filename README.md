@@ -121,6 +121,7 @@ See the [README](./chart/go-infrabin/README.md).
 
 * _grpc_: `infrabin.Infrabin.Proxy` _rest_: `GET /proxy`
   * _NOTE_: `--enable-proxy-endpoint` must be set
+  * _NOTE_: the target endpoint **MUST** provide a JSON response
   * _grpc request_
 
   ```text
@@ -170,6 +171,25 @@ See the [README](./chart/go-infrabin/README.md).
   ```json
   {
     "assumedRoleId":"AROAITQZVNCXXXXXXXXXX:aws-assume-session-go-infrabin"
+  }
+  ```
+
+* _grpc_: `infrabin.Infrabin.AWSGetCallerIdentity` _rest_: `GET /aws/get-caller-identity`
+  * _grpc request_
+
+  ```text
+  message Empty {}
+  ```
+
+  * _returns_: JSON with the GetCallerIdentity output from AWS
+
+  ```json
+  {
+    "getCallerIdentidy": {
+      "account": "123456789",
+      "arn": "arn:aws:sts::1234546789:assumed-role/foo/bar",
+      "user_id": "AROAITQZVNCVSVXXXXXX:foo"
+    }
   }
   ```
 

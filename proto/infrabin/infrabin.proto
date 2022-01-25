@@ -55,6 +55,12 @@ service Infrabin {
             get: "/aws/assume/{role=**}"
         };
     }
+
+    rpc AWSGetCallerIdentity(Empty) returns (Response) {
+        option (google.api.http) = {
+            get: "/aws/get-caller-identity"
+        };
+    }
 }
 
 
@@ -71,6 +77,7 @@ message Response {
 	map<string, string> env          = 7;
     string path = 8;
     string assumedRoleId = 9;
+    GetCallerIdentityResponse getCallerIdentidy = 10;
 }
 
 message KubeResponse {
@@ -78,6 +85,12 @@ message KubeResponse {
     string  namespace = 2;
     string  pod_ip = 3;
     string  node_name = 4;
+}
+
+message GetCallerIdentityResponse {
+    string account = 1;
+    string arn = 2;
+    string user_id = 3;
 }
 
 message DelayRequest {
