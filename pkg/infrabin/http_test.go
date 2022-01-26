@@ -376,7 +376,7 @@ func TestAWSGetCallerIdentity(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
 	}
-	responseString := "{\"getCallerIdentidy\":{\"account\":\"123456789012\",\"arn\":\"arn:aws:iam::123456789012:role/my_role\",\"user_id\":\"AIDAJQABLZS4A3QDU576Q\"}}"
+	responseString := "{\"getCallerIdentity\":{\"account\":\"123456789012\",\"arn\":\"arn:aws:iam::123456789012:role/my_role\",\"user_id\":\"AIDAJQABLZS4A3QDU576Q\"}}"
 	if !reflect.DeepEqual(rr.Body.String(), responseString) {
 		t.Errorf("handler returned unexpected body: got %v want %s", rr.Body.String(), responseString)
 	}

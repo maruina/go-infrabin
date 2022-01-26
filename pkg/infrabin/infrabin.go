@@ -161,7 +161,7 @@ func (s *InfrabinService) AWSGetCallerIdentity(ctx context.Context, _ *Empty) (*
 	}
 
 	return &Response{
-		GetCallerIdentidy: &GetCallerIdentityResponse{
+		GetCallerIdentity: &GetCallerIdentityResponse{
 			Account: *response.Account,
 			Arn:     *response.Arn,
 			UserId:  *response.UserId,
