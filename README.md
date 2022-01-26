@@ -185,7 +185,7 @@ See the [README](./chart/go-infrabin/README.md).
 
   ```json
   {
-    "getCallerIdentidy": {
+    "getCallerIdentity": {
       "account": "123456789",
       "arn": "arn:aws:sts::1234546789:assumed-role/foo/bar",
       "user_id": "AROAITQZVNCVSVXXXXXX:foo"
