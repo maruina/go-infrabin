@@ -1,6 +1,6 @@
-FROM golang:1.17-buster as builder
+FROM golang:1.18-buster as builder
 ENV GRPC_HEALTH_PROBE_VERSION="v0.3.1"
-ENV PROTOBUF_VERSION="3.15.5"
+ENV PROTOBUF_VERSION="3.20.1"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends unzip=6.0-23+deb10u2 && \
