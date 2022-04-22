@@ -24,9 +24,10 @@ See the [README](./chart/go-infrabin/README.md).
 * `--aws-metadata-endpoint`: AWS Metadata Endpoint (default `http://169.254.169.254/latest/meta-data/`)
 * `--drain-timeout`: Drain timeout (default `15s`)
 * `--enable-proxy-endpoint`: When enabled allows `/proxy` and `/aws` endpoints
+* `--proxy-allow-regexp`: Regular expression to allow URL called by the `/proxy` endpoint (default `".*"`)
 * `--grpc-host`: gRPC host (default `0.0.0.0`)
 * `--grpc-port`: gRPC port (default `50051`)
-* `-h`, `--help`: help for go-infrabin
+* `-h`, `--help`: Help for go-infrabin
 * `--http-idle-timeout`: HTTP idle timeout (default `15s`)
 * `--http-read-header-timeout`: HTTP read header timeout (default `15s`)
 * `--http-read-timeout`: HTTP read timeout (default `1m0s`)

@@ -224,10 +224,53 @@ func TestEnvHandlerNotFound(t *testing.T) {
 	}
 }
 
-func TestProxyHandler(t *testing.T) {
-
+func TestProxyHandlerRegexpAllowURL(t *testing.T) {
 	// Set the Proxy to true for testing
 	viper.Set("proxyEndpoint", true)
+
+	response, err := json.Marshal(map[string]string{"foo": "bar"})
+	if err != nil {
+		t.Fatalf("Failed to marshal fake response: %v", err)
+	}
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write(response); err != nil {
+			t.Fatalf("Failed to write fake response body: %v", err)
+		}
+	}))
+	defer mockServer.Close()
+
+	body, err := json.Marshal(map[string]interface{}{
+		"method":  "POST",
+		"url":     mockServer.URL,
+		"headers": map[string]string{"Accept": "*/*"},
+		"body":    map[string]string{},
+	})
+	if err != nil {
+		t.Fatalf("Failed to make request body: %v", err)
+	}
+
+	// Allow the mock server URL
+	viper.Set("proxyAllowRegexp", mockServer.URL)
+
+	req := httptest.NewRequest("POST", "/proxy", bytes.NewReader(body))
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+	if !reflect.DeepEqual(rr.Body.Bytes(), response) {
+		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), string(response))
+	}
+}
+
+func TestProxyHandlerRegexpDenyURL(t *testing.T) {
+	// Set the Proxy to true for testing
+	viper.Set("proxyEndpoint", true)
+	viper.Set("proxyAllowRegexp", "fakeurl")
 
 	response, err := json.Marshal(map[string]string{"foo": "bar"})
 	if err != nil {
@@ -257,11 +300,8 @@ func TestProxyHandler(t *testing.T) {
 	handler := newHTTPInfrabinHandler()
 	handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
-	}
-	if !reflect.DeepEqual(rr.Body.Bytes(), response) {
-		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), string(response))
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusBadRequest)
 	}
 }
 
@@ -275,6 +315,7 @@ func TestAWSMetadataHandler(t *testing.T) {
 	}))
 
 	viper.Set("proxyEndpoint", true)
+	viper.Set("proxyAllowRegexp", ".*")
 	viper.Set("awsMetadataEndpoint", mockServer.URL)
 
 	req := httptest.NewRequest("GET", "/aws/metadata/foo", nil)
