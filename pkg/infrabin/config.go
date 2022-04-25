@@ -9,20 +9,21 @@ import (
 
 const (
 	AppName                    = "go-infrabin"
-	DefaultHost                = "0.0.0.0"
-	DefaultGRPCPort       uint = 50051
-	DefaultHTTPServerPort uint = 8888
-	DefaultPrometheusPort uint = 8887
-	EnableProxyEndpoint        = false
 	AWSMetadataEndpoint        = "http://169.254.169.254/latest/meta-data/"
-	DrainTimeout               = 15 * time.Second
-	MaxDelay                   = 120 * time.Second
-	HttpWriteTimeout           = MaxDelay + time.Second
-	HttpReadTimeout            = 60 * time.Second
-	HttpIdleTimeout            = 15 * time.Second
-	HttpReadHeaderTimeout      = 15 * time.Second
 	DefaultConfigName          = "config"
 	DefaultConfigType          = "yaml"
+	DefaultGRPCPort       uint = 50051
+	DefaultHost                = "0.0.0.0"
+	DefaultHTTPServerPort uint = 8888
+	DefaultPrometheusPort uint = 8887
+	DrainTimeout               = 15 * time.Second
+	EnableProxyEndpoint        = false
+	HttpIdleTimeout            = 15 * time.Second
+	HttpReadHeaderTimeout      = 15 * time.Second
+	HttpReadTimeout            = 60 * time.Second
+	HttpWriteTimeout           = MaxDelay + time.Second
+	MaxDelay                   = 120 * time.Second
+	ProxyAllowRegexp           = ".*"
 )
 
 var (
@@ -59,6 +60,7 @@ func ReadConfiguration() {
 
 	// ProxyEndpoint Configuration
 	viper.SetDefault("proxyEndpoint", EnableProxyEndpoint)
+	viper.SetDefault("proxyAllowRegexp", ProxyAllowRegexp)
 
 	// Other Infrastructure Defaults
 	viper.SetDefault("awsMetadataEndpoint", AWSMetadataEndpoint)

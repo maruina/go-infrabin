@@ -24,6 +24,8 @@ func TestDefaultConfig(t *testing.T) {
 		{"prom.port", "8887"},
 
 		{"proxyEndpoint", "false"},
+		{"proxyAllowRegexp", ".*"},
+
 		{"awsMetadataEndpoint", "http://169.254.169.254/latest/meta-data/"},
 	}
 

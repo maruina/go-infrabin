@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -84,10 +85,23 @@ func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*st
 	if !viper.GetBool("proxyEndpoint") {
 		return nil, status.Errorf(codes.Unimplemented, "Proxy endpoint disabled. Enabled with --enable-proxy-endpoint")
 	}
+
+	// Compile the regexp
+	exp := viper.GetString("proxyAllowRegexp")
+	r, err := regexp.Compile(exp)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Unable to compile %s regexp: %v", exp, err)
+	}
+
 	// Convert Struct into json []byte
 	requestBody, err := request.Body.MarshalJSON()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Unable to marshal downstream request body: %v", err)
+	}
+
+	// Check if the target URL is allowed
+	if !r.MatchString(request.Url) {
+		return nil, status.Errorf(codes.InvalidArgument, "Unable to build request as the target URL %s is blocked by the regexp %s", request.Url, exp)
 	}
 
 	// Make upstream request from incoming request

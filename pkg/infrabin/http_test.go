@@ -13,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/maruina/go-infrabin/internal/aws"
 	"github.com/maruina/go-infrabin/internal/helpers"
 	"google.golang.org/grpc/codes"
@@ -224,8 +225,7 @@ func TestEnvHandlerNotFound(t *testing.T) {
 	}
 }
 
-func TestProxyHandler(t *testing.T) {
-
+func TestProxyHandlerRegexpAllowURL(t *testing.T) {
 	// Set the Proxy to true for testing
 	viper.Set("proxyEndpoint", true)
 
@@ -251,6 +251,9 @@ func TestProxyHandler(t *testing.T) {
 		t.Fatalf("Failed to make request body: %v", err)
 	}
 
+	// Allow the mock server URL
+	viper.Set("proxyAllowRegexp", mockServer.URL)
+
 	req := httptest.NewRequest("POST", "/proxy", bytes.NewReader(body))
 
 	rr := httptest.NewRecorder()
@@ -265,6 +268,32 @@ func TestProxyHandler(t *testing.T) {
 	}
 }
 
+func TestProxyHandlerRegexpDenyURL(t *testing.T) {
+	// Set the Proxy to true for testing
+	viper.Set("proxyEndpoint", true)
+	viper.Set("proxyAllowRegexp", "fakeurl")
+
+	body, err := json.Marshal(map[string]interface{}{
+		"method":  "POST",
+		"url":     "http://www.example.org",
+		"headers": map[string]string{"Accept": "*/*"},
+		"body":    map[string]string{},
+	})
+	if err != nil {
+		t.Fatalf("Failed to make request body: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/proxy", bytes.NewReader(body))
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusBadRequest)
+	}
+}
+
 func TestAWSMetadataHandler(t *testing.T) {
 
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -275,6 +304,7 @@ func TestAWSMetadataHandler(t *testing.T) {
 	}))
 
 	viper.Set("proxyEndpoint", true)
+	viper.Set("proxyAllowRegexp", ".*")
 	viper.Set("awsMetadataEndpoint", mockServer.URL)
 
 	req := httptest.NewRequest("GET", "/aws/metadata/foo", nil)
@@ -376,8 +406,20 @@ func TestAWSGetCallerIdentity(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
 	}
+
+	// See https://github.com/golang/protobuf/issues/1121
 	responseString := "{\"getCallerIdentity\":{\"account\":\"123456789012\",\"arn\":\"arn:aws:iam::123456789012:role/my_role\",\"user_id\":\"AIDAJQABLZS4A3QDU576Q\"}}"
-	if !reflect.DeepEqual(rr.Body.String(), responseString) {
-		t.Errorf("handler returned unexpected body: got %v want %s", rr.Body.String(), responseString)
+	var responseJSON map[string]interface{}
+	if err := json.Unmarshal([]byte(responseString), &responseJSON); err != nil {
+		t.Fatalf("failed to parse responseString %v: %v", responseString, err)
+	}
+
+	var rrJSON map[string]interface{}
+	if err := json.Unmarshal([]byte(rr.Body.String()), &rrJSON); err != nil {
+		t.Fatalf("failed to parse responseRecorder body %v: %v", rr.Body.String(), err)
+	}
+
+	if diff := cmp.Diff(responseJSON, rrJSON); diff != "" {
+		t.Errorf("unexpected difference (-want +got):\n%s", diff)
 	}
 }
