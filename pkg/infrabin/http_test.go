@@ -273,21 +273,9 @@ func TestProxyHandlerRegexpDenyURL(t *testing.T) {
 	viper.Set("proxyEndpoint", true)
 	viper.Set("proxyAllowRegexp", "fakeurl")
 
-	response, err := json.Marshal(map[string]string{"foo": "bar"})
-	if err != nil {
-		t.Fatalf("Failed to marshal fake response: %v", err)
-	}
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write(response); err != nil {
-			t.Fatalf("Failed to write fake response body: %v", err)
-		}
-	}))
-	defer mockServer.Close()
-
 	body, err := json.Marshal(map[string]interface{}{
 		"method":  "POST",
-		"url":     mockServer.URL,
+		"url":     "http://www.example.org",
 		"headers": map[string]string{"Accept": "*/*"},
 		"body":    map[string]string{},
 	})
