@@ -61,6 +61,13 @@ service Infrabin {
             get: "/aws/get-caller-identity"
         };
     }
+
+    rpc Intermittent(Empty) returns (Response) {
+        option (google.api.http) = {
+            get: "/intermittent"
+        };
+    }
+
 }
 
 
@@ -78,6 +85,7 @@ message Response {
     string path = 8;
     string assumedRoleId = 9;
     GetCallerIdentityResponse getCallerIdentity = 10;
+    IntermittentResponse intermittent = 11;
 }
 
 message KubeResponse {
@@ -122,4 +130,8 @@ message AnyRequest {
 
 message AWSAssumeRequest {
     string role = 1;
+}
+
+message IntermittentResponse {
+    int32 intermittent_errors = 1;
 }

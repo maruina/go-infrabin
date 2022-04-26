@@ -26,7 +26,8 @@ func newHTTPInfrabinHandler() http.Handler {
 	return NewHTTPServer(
 		"test",
 		RegisterInfrabin("/", &InfrabinService{
-			STSClient: aws.FakeSTSClient{},
+			STSClient:          aws.FakeSTSClient{},
+			IntermittentErrors: 2,
 		}),
 	).Server.Handler
 }
@@ -295,7 +296,6 @@ func TestProxyHandlerRegexpDenyURL(t *testing.T) {
 }
 
 func TestAWSMetadataHandler(t *testing.T) {
-
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte("{}")); err != nil {
@@ -396,7 +396,7 @@ func TestAWSAssumeHandlerWithInvalidRole(t *testing.T) {
 	}
 }
 
-func TestAWSGetCallerIdentity(t *testing.T) {
+func TestAWSGetCallerIdentityHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/aws/get-caller-identity", nil)
 
 	rr := httptest.NewRecorder()

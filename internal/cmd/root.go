@@ -35,6 +35,7 @@ var (
 				"httpReadTimeout":       "http-read-timeout",
 				"httpIdleTimeout":       "http-idle-timeout",
 				"httpReadHeaderTimeout": "http-read-header-timeout",
+				"intermittentErrors":    "intermittent-errors",
 			} {
 				if err := viper.BindPFlag(vFlag, cmd.Flags().Lookup(cFlag)); err != nil {
 					return err
@@ -70,6 +71,7 @@ func init() {
 	rootCmd.Flags().Duration("http-read-timeout", infrabin.HttpReadTimeout, "HTTP read timeout")
 	rootCmd.Flags().Duration("http-idle-timeout", infrabin.HttpIdleTimeout, "HTTP idle timeout")
 	rootCmd.Flags().Duration("http-read-header-timeout", infrabin.HttpReadHeaderTimeout, "HTTP read header timeout")
+	rootCmd.Flags().Int32("intermittent-errors", infrabin.IntermittentErrors, "Consecutive 503 errors before returning 200 for the /intermittent endpoint")
 }
 
 func run(cmd *cobra.Command, args []string) {
