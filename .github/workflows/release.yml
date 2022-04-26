@@ -61,9 +61,7 @@ jobs:
     - name: Check images
       run: |
         docker buildx imagetools inspect docker.io/maruina/go-infrabin:${{ steps.tagName.outputs.tag }}
-        docker buildx imagetools inspect ghcr.io/
-        docker pull docker.io/
-        docker pull ghcr.io/
+        docker buildx imagetools inspect ghcr.io/maruina/go-infrabin:${{ steps.tagName.outputs.tag }}
 
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v2.9.1
