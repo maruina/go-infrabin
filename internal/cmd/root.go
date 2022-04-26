@@ -27,6 +27,7 @@ var (
 				"prom.host":             "prom-host",
 				"prom.port":             "prom-port",
 				"proxyEndpoint":         "enable-proxy-endpoint",
+				"proxyAllowRegexp":      "proxy-allow-regexp",
 				"awsMetadataEndpoint":   "aws-metadata-endpoint",
 				"drainTimeout":          "drain-timeout",
 				"maxDelay":              "max-delay",
@@ -61,6 +62,7 @@ func init() {
 	rootCmd.Flags().IP("prom-host", net.ParseIP(infrabin.DefaultHost), "Prometheus metrics host")
 	rootCmd.Flags().Uint("prom-port", infrabin.DefaultPrometheusPort, "Prometheus metrics port")
 	rootCmd.Flags().Bool("enable-proxy-endpoint", infrabin.EnableProxyEndpoint, "When enabled allows /proxy and /aws endpoints")
+	rootCmd.Flags().String("proxy-allow-regexp", infrabin.ProxyAllowRegexp, "Regexp to allow URLs via /proxy endopoint")
 	rootCmd.Flags().String("aws-metadata-endpoint", infrabin.AWSMetadataEndpoint, "AWS Metadata Endpoint")
 	rootCmd.Flags().Duration("drain-timeout", infrabin.DrainTimeout, "Drain timeout")
 	rootCmd.Flags().Duration("max-delay", infrabin.MaxDelay, "Maximum delay")
