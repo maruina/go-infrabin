@@ -79,8 +79,8 @@ func NewGRPCServer() *GRPCServer {
 		log.Fatalf("failed to create the AWS STS client, %v", err)
 	}
 	infrabinService := &InfrabinService{
-		STSClient:                 stsClient,
-		IntermittentErrorsCounter: 0,
+		STSClient:          stsClient,
+		IntermittentErrors: 0,
 	}
 
 	// Register gRPC services on the grpc server
