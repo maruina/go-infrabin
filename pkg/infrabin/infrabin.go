@@ -27,8 +27,8 @@ import (
 // Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
 type InfrabinService struct {
 	UnimplementedInfrabinServer
-	STSClient          aws.STSApi
-	IntermittentErrors int32
+	STSClient                 aws.STSApi
+	IntermittentErrorsCounter int32
 }
 
 func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error) {
@@ -188,12 +188,12 @@ func (s *InfrabinService) AWSGetCallerIdentity(ctx context.Context, _ *Empty) (*
 func (s *InfrabinService) Intermittent(ctx context.Context, _ *Empty) (*Response, error) {
 	maxErrs := viper.GetInt32("intermittentErrors")
 
-	if s.IntermittentErrors < maxErrs {
-		s.IntermittentErrors++
-		return nil, status.Errorf(codes.Unavailable, fmt.Sprintf("%d errors left", maxErrs-s.IntermittentErrors+1))
+	if s.IntermittentErrorsCounter < maxErrs {
+		s.IntermittentErrorsCounter++
+		return nil, status.Errorf(codes.Unavailable, fmt.Sprintf("%d errors left", maxErrs-s.IntermittentErrorsCounter+1))
 	}
 
-	s.IntermittentErrors = 0
+	s.IntermittentErrorsCounter = 0
 	return &Response{
 		Intermittent: &IntermittentResponse{
 			IntermittentErrors: maxErrs,

@@ -26,8 +26,8 @@ func newHTTPInfrabinHandler() http.Handler {
 	return NewHTTPServer(
 		"test",
 		RegisterInfrabin("/", &InfrabinService{
-			STSClient:          aws.FakeSTSClient{},
-			IntermittentErrors: 0,
+			STSClient:                 aws.FakeSTSClient{},
+			IntermittentErrorsCounter: 0,
 		}),
 	).Server.Handler
 }
