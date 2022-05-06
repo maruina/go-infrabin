@@ -25,6 +25,7 @@ See the [README](./chart/go-infrabin/README.md).
 * `--drain-timeout`: Drain timeout (default `15s`)
 * `--enable-proxy-endpoint`: When enabled allows `/proxy` and `/aws` endpoints
 * `--proxy-allow-regexp`: Regular expression to allow URL called by the `/proxy` endpoint (default `".*"`)
+* `--intermittent-errors`: Number of consecutive 503 errors before returning 200 when calling the `/intermittent` endpoint (default `2`)
 * `--grpc-host`: gRPC host (default `0.0.0.0`)
 * `--grpc-port`: gRPC port (default `50051`)
 * `-h`, `--help`: Help for go-infrabin
@@ -192,6 +193,23 @@ See the [README](./chart/go-infrabin/README.md).
       "user_id": "AROAITQZVNCVSVXXXXXX:foo"
     }
   }
+  ```
+
+* _grpc_: `infrabin.Infrabin.Intermittent` _rest_: `GET /intermittent`
+  * _grpc request_
+
+  ```text
+  message Empty {}
+  ```
+
+  * _returns_: JSON with the remaining errors and then the configured `--intermittent-errors` flag
+
+  ```json
+  {"code":14, "message":"2 errors left"}
+  ```
+
+  ```json
+  {"intermittent":{"consecutive_errors":2}
   ```
 
 ## Errors

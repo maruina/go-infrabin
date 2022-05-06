@@ -24,6 +24,7 @@ const (
 	HttpWriteTimeout           = MaxDelay + time.Second
 	MaxDelay                   = 120 * time.Second
 	ProxyAllowRegexp           = ".*"
+	IntermittentErrors         = 2
 )
 
 var (
@@ -70,6 +71,9 @@ func ReadConfiguration() {
 
 	// Max delay duration for Delay endpoint
 	viper.SetDefault("maxDelay", MaxDelay)
+
+	// Consecutive errors for intermittent endpoint
+	viper.SetDefault("intermittentErrors", IntermittentErrors)
 
 	// http timeouts
 	viper.SetDefault("httpWriteTimeout", HttpWriteTimeout)
