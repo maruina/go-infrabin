@@ -27,7 +27,7 @@ func newHTTPInfrabinHandler() http.Handler {
 		"test",
 		RegisterInfrabin("/", &InfrabinService{
 			STSClient:          aws.FakeSTSClient{},
-			IntermittentErrors: 2,
+			IntermittentErrors: 0,
 		}),
 	).Server.Handler
 }
@@ -422,4 +422,74 @@ func TestAWSGetCallerIdentityHandler(t *testing.T) {
 	if diff := cmp.Diff(responseJSON, rrJSON); diff != "" {
 		t.Errorf("unexpected difference (-want +got):\n%s", diff)
 	}
+}
+
+func TestIntermittentHandler(t *testing.T) {
+	viper.Set("intermittentErrors", 2)
+	req := httptest.NewRequest("GET", "/intermittent", nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+
+	// First request should be 503
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusServiceUnavailable)
+	}
+
+	responseString := "{\"code\":14,\"message\":\"2 errors left\"}"
+	var responseJSON map[string]interface{}
+	if err := json.Unmarshal([]byte(responseString), &responseJSON); err != nil {
+		t.Fatalf("failed to parse responseString %v: %v", responseString, err)
+	}
+
+	var rrJSON map[string]interface{}
+	if err := json.Unmarshal([]byte(rr.Body.String()), &rrJSON); err != nil {
+		t.Fatalf("failed to parse responseRecorder body %v: %v", rr.Body.String(), err)
+	}
+
+	if diff := cmp.Diff(responseJSON, rrJSON); diff != "" {
+		t.Errorf("unexpected difference (-want +got):\n%s", diff)
+	}
+
+	// Second request should be 503
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusServiceUnavailable)
+	}
+
+	responseString = "{\"code\":14,\"message\":\"1 errors left\"}"
+	if err := json.Unmarshal([]byte(responseString), &responseJSON); err != nil {
+		t.Fatalf("failed to parse responseString %v: %v", responseString, err)
+	}
+
+	if err := json.Unmarshal([]byte(rr.Body.String()), &rrJSON); err != nil {
+		t.Fatalf("failed to parse responseRecorder body %v: %v", rr.Body.String(), err)
+	}
+
+	if diff := cmp.Diff(responseJSON, rrJSON); diff != "" {
+		t.Errorf("unexpected difference (-want +got):\n%s", diff)
+	}
+
+	// Third request should be 200
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+
+	responseString = "{\"intermittent\":{\"intermittent_errors\":2}}"
+	if err := json.Unmarshal([]byte(responseString), &responseJSON); err != nil {
+		t.Fatalf("failed to parse responseString %v: %v", responseString, err)
+	}
+
+	if err := json.Unmarshal([]byte(rr.Body.String()), &rrJSON); err != nil {
+		t.Fatalf("failed to parse responseRecorder body %v: %v", rr.Body.String(), err)
+	}
+
+	if diff := cmp.Diff(responseJSON, rrJSON); diff != "" {
+		t.Errorf("unexpected difference (-want +got):\n%s", diff)
+	}
+
 }
