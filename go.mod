@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
-	google.golang.org/genproto v0.0.0-20220617124728-180714bec0ad
+	google.golang.org/genproto v0.0.0-20220627200112-0a929928cb33
 	google.golang.org/grpc v1.47.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.28.0
