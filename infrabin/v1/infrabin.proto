@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package infrabin.v1;
+
+option go_package = "github.com/maruina/go-infrabin/gen/infrabin/v1;infrabinv1";
+
+message HeadersRequest {}
+
+message HeadersResponse {
+    map<string,string> headers = 1;
+}
+
+service InfrabinService {
+    rpc Headers(HeadersRequest) returns (HeadersResponse) {}
+}
