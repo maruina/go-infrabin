@@ -19,7 +19,11 @@ func (s *InfrabinServer) Headers(ctx context.Context, req *connect.Request[infra
 	res := connect.NewResponse(&infrabinv1.HeadersResponse{
 		Headers: map[string]string{},
 	})
-	res.Header().Set("Greet-Version", "v1")
+	for k, vv := range req.Header() {
+		for _, v := range vv {
+			res.Msg.Headers[k] = v
+		}
+	}
 	return res, nil
 }
 
