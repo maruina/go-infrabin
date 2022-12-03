@@ -47,3 +47,16 @@ func (s *InfrabinServer) Env(ctx context.Context, req *connect.Request[infrabinv
 	res.Msg.Environment[req.Msg.Key] = value
 	return res, nil
 }
+
+func (s *InfrabinServer) Root(ctx context.Context, req *connect.Request[infrabinv1.RootRequest]) (*connect.Response[infrabinv1.RootResponse], error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	res := connect.NewResponse(&infrabinv1.RootResponse{
+		Hostname: hostname,
+	})
+
+	return res, nil
+}
