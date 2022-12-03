@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/bufbuild/connect-go"
 	"golang.org/x/net/http2"
@@ -14,8 +16,7 @@ import (
 
 type InfrabinServer struct{}
 
-func (s *InfrabinServer) Headers(ctx context.Context, req *connect.Request[infrabinv1.HeadersRequest],
-) (*connect.Response[infrabinv1.HeadersResponse], error) {
+func (s *InfrabinServer) Headers(ctx context.Context, req *connect.Request[infrabinv1.HeadersRequest]) (*connect.Response[infrabinv1.HeadersResponse], error) {
 	res := connect.NewResponse(&infrabinv1.HeadersResponse{
 		Headers: map[string]string{},
 	})
@@ -24,6 +25,28 @@ func (s *InfrabinServer) Headers(ctx context.Context, req *connect.Request[infra
 			res.Msg.Headers[k] = v
 		}
 	}
+	return res, nil
+}
+
+func (s *InfrabinServer) Env(ctx context.Context, req *connect.Request[infrabinv1.EnvRequest]) (*connect.Response[infrabinv1.EnvResponse], error) {
+	res := connect.NewResponse(&infrabinv1.EnvResponse{
+		Environment: map[string]string{},
+	})
+	if req.Msg.Key == "" {
+		for _, item := range os.Environ() {
+			v := strings.Split(item, "=")
+			if len(v) == 2 {
+				res.Msg.Environment[v[0]] = v[1]
+			}
+		}
+		return res, nil
+	}
+
+	value, ok := os.LookupEnv(req.Msg.Key)
+	if !ok {
+		return nil, connect.NewError(connect.CodeNotFound, nil)
+	}
+	res.Msg.Environment[req.Msg.Key] = value
 	return res, nil
 }
 

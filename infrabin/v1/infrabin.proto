@@ -10,6 +10,15 @@ message HeadersResponse {
     map<string,string> headers = 1;
 }
 
+message EnvRequest {
+    string key = 1;
+}
+
+message EnvResponse {
+    map<string,string> environment = 1;
+}
+
 service InfrabinService {
     rpc Headers(HeadersRequest) returns (HeadersResponse) {}
+    rpc Env(EnvRequest) returns (EnvResponse) {}
 }

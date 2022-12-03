@@ -28,6 +28,7 @@ const (
 // InfrabinServiceClient is a client for the infrabin.v1.InfrabinService service.
 type InfrabinServiceClient interface {
 	Headers(context.Context, *connect_go.Request[v1.HeadersRequest]) (*connect_go.Response[v1.HeadersResponse], error)
+	Env(context.Context, *connect_go.Request[v1.EnvRequest]) (*connect_go.Response[v1.EnvResponse], error)
 }
 
 // NewInfrabinServiceClient constructs a client for the infrabin.v1.InfrabinService service. By
@@ -45,12 +46,18 @@ func NewInfrabinServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 			baseURL+"/infrabin.v1.InfrabinService/Headers",
 			opts...,
 		),
+		env: connect_go.NewClient[v1.EnvRequest, v1.EnvResponse](
+			httpClient,
+			baseURL+"/infrabin.v1.InfrabinService/Env",
+			opts...,
+		),
 	}
 }
 
 // infrabinServiceClient implements InfrabinServiceClient.
 type infrabinServiceClient struct {
 	headers *connect_go.Client[v1.HeadersRequest, v1.HeadersResponse]
+	env     *connect_go.Client[v1.EnvRequest, v1.EnvResponse]
 }
 
 // Headers calls infrabin.v1.InfrabinService.Headers.
@@ -58,9 +65,15 @@ func (c *infrabinServiceClient) Headers(ctx context.Context, req *connect_go.Req
 	return c.headers.CallUnary(ctx, req)
 }
 
+// Env calls infrabin.v1.InfrabinService.Env.
+func (c *infrabinServiceClient) Env(ctx context.Context, req *connect_go.Request[v1.EnvRequest]) (*connect_go.Response[v1.EnvResponse], error) {
+	return c.env.CallUnary(ctx, req)
+}
+
 // InfrabinServiceHandler is an implementation of the infrabin.v1.InfrabinService service.
 type InfrabinServiceHandler interface {
 	Headers(context.Context, *connect_go.Request[v1.HeadersRequest]) (*connect_go.Response[v1.HeadersResponse], error)
+	Env(context.Context, *connect_go.Request[v1.EnvRequest]) (*connect_go.Response[v1.EnvResponse], error)
 }
 
 // NewInfrabinServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -75,6 +88,11 @@ func NewInfrabinServiceHandler(svc InfrabinServiceHandler, opts ...connect_go.Ha
 		svc.Headers,
 		opts...,
 	))
+	mux.Handle("/infrabin.v1.InfrabinService/Env", connect_go.NewUnaryHandler(
+		"/infrabin.v1.InfrabinService/Env",
+		svc.Env,
+		opts...,
+	))
 	return "/infrabin.v1.InfrabinService/", mux
 }
 
@@ -83,4 +101,8 @@ type UnimplementedInfrabinServiceHandler struct{}
 
 func (UnimplementedInfrabinServiceHandler) Headers(context.Context, *connect_go.Request[v1.HeadersRequest]) (*connect_go.Response[v1.HeadersResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("infrabin.v1.InfrabinService.Headers is not implemented"))
+}
+
+func (UnimplementedInfrabinServiceHandler) Env(context.Context, *connect_go.Request[v1.EnvRequest]) (*connect_go.Response[v1.EnvResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("infrabin.v1.InfrabinService.Env is not implemented"))
 }
