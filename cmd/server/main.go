@@ -15,9 +15,10 @@ func main() {
 	mux := http.NewServeMux()
 	path, handler := infrabinv1connect.NewInfrabinServiceHandler(infrabinServer)
 	mux.Handle(path, handler)
-	http.ListenAndServe(
-		"localhost:8080",
+	httpServer := &http.Server{
+		Addr: ":8888",
 		// Use h2c so we can serve HTTP/2 without TLS.
-		h2c.NewHandler(mux, &http2.Server{}),
-	)
+		Handler: h2c.NewHandler(mux, &http2.Server{}),
+	}
+	httpServer.ListenAndServe()
 }
