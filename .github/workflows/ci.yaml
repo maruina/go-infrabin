@@ -1,0 +1,52 @@
+name: ci
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+env:
+  MAKEFLAGS: "-j 8"
+permissions:
+  contents: read
+  id-token: 'write'
+jobs:
+  testlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: setup-go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19.x
+      - name: make-test
+        run: make test && make checkgenerate
+      - name: make-lint
+        run: make lint
+
+  docker-build-push:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs:
+      - testlint
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: Login to GitHub Packages
+        uses: docker/login-action@v2.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push latest docker image on master
+        uses: docker/build-push-action@v3.0.0
+        with:
+          push: true
+          tags: |
+            docker.io/maruina/go-infrabin:latest
+            ghcr.io/maruina/go-infrabin:latest
