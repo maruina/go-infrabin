@@ -7,3 +7,7 @@ lint: ## Lint code and proto
 generate: ## Generate code and proto
 		rm -rf gen
 		buf generate
+
+.PHONY: test
+test: ## Run tests
+	go test -v ./...
