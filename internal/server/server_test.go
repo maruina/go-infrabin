@@ -47,4 +47,44 @@ func TestInfrabinService(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("env endpoint", func(t *testing.T) {
+		envMap := map[string]string{
+			"KEY_1": "foo",
+			"KEY_2": "bar",
+		}
+
+		for k, v := range envMap {
+			err := os.Setenv(k, v)
+			if err != nil {
+				t.Error("error setting environment variable", err)
+			}
+		}
+
+		for _, client := range clients {
+			// If key is empty, return all environment variables
+			result, err := client.Env(context.Background(), connect.NewRequest(&infrabinv1.EnvRequest{}))
+			if err != nil {
+				t.Error("error calling env endpoint", err)
+			}
+			if len(result.Msg.Environment) <= 2 {
+				t.Errorf("not enought environment variables got: %d, want at least 2", len(result.Msg.Environment))
+			}
+
+			result, err = client.Env(context.Background(), connect.NewRequest(&infrabinv1.EnvRequest{Key: "KEY_1"}))
+			if err != nil {
+				t.Error("error calling env endpoint", err)
+			}
+			if result.Msg.Environment["KEY_1"] != envMap["KEY_1"] {
+				t.Errorf("got: %v, wanted %v", result.Msg.Environment, envMap["KEY_1"])
+			}
+
+			_, err = client.Env(context.Background(), connect.NewRequest(&infrabinv1.EnvRequest{Key: "KEY_NOT_EXIST"}))
+			if connect.CodeOf(err) != connect.CodeNotFound {
+				t.Errorf("got: %v, wanted: %v", connect.CodeOf(err), connect.CodeNotFound)
+			}
+
+		}
+	})
+
 }
