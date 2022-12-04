@@ -7,25 +7,25 @@ option go_package = "github.com/maruina/go-infrabin/gen/infrabin/v1;infrabinv1";
 message HeadersRequest {}
 
 message HeadersResponse {
-    map<string,string> headers = 1;
+  map<string, string> headers = 1;
 }
 
 message EnvRequest {
-    string key = 1;
+  string key = 1;
 }
 
 message EnvResponse {
-    map<string,string> environment = 1;
+  map<string, string> environment = 1;
 }
 
 message RootRequest {}
 
 message RootResponse {
-    string hostname = 1;
+  string hostname = 1;
 }
 
 service InfrabinService {
-    rpc Headers(HeadersRequest) returns (HeadersResponse) {}
-    rpc Env(EnvRequest) returns (EnvResponse) {}
-    rpc Root(RootRequest) returns (RootResponse) {}
+  rpc Headers(HeadersRequest) returns (HeadersResponse) {}
+  rpc Env(EnvRequest) returns (EnvResponse) {}
+  rpc Root(RootRequest) returns (RootResponse) {}
 }

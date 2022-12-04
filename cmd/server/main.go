@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"golang.org/x/net/http2"
@@ -20,5 +21,7 @@ func main() {
 		// Use h2c so we can serve HTTP/2 without TLS.
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
-	httpServer.ListenAndServe()
+	if err := httpServer.ListenAndServe(); err != nil {
+		log.Fatal(err)
+	}
 }
