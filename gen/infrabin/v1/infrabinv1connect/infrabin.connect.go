@@ -30,6 +30,7 @@ type InfrabinServiceClient interface {
 	Headers(context.Context, *connect_go.Request[v1.HeadersRequest]) (*connect_go.Response[v1.HeadersResponse], error)
 	Env(context.Context, *connect_go.Request[v1.EnvRequest]) (*connect_go.Response[v1.EnvResponse], error)
 	Root(context.Context, *connect_go.Request[v1.RootRequest]) (*connect_go.Response[v1.RootResponse], error)
+	Delay(context.Context, *connect_go.Request[v1.DelayRequest]) (*connect_go.Response[v1.DelayResponse], error)
 }
 
 // NewInfrabinServiceClient constructs a client for the infrabin.v1.InfrabinService service. By
@@ -57,6 +58,11 @@ func NewInfrabinServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 			baseURL+"/infrabin.v1.InfrabinService/Root",
 			opts...,
 		),
+		delay: connect_go.NewClient[v1.DelayRequest, v1.DelayResponse](
+			httpClient,
+			baseURL+"/infrabin.v1.InfrabinService/Delay",
+			opts...,
+		),
 	}
 }
 
@@ -65,6 +71,7 @@ type infrabinServiceClient struct {
 	headers *connect_go.Client[v1.HeadersRequest, v1.HeadersResponse]
 	env     *connect_go.Client[v1.EnvRequest, v1.EnvResponse]
 	root    *connect_go.Client[v1.RootRequest, v1.RootResponse]
+	delay   *connect_go.Client[v1.DelayRequest, v1.DelayResponse]
 }
 
 // Headers calls infrabin.v1.InfrabinService.Headers.
@@ -82,11 +89,17 @@ func (c *infrabinServiceClient) Root(ctx context.Context, req *connect_go.Reques
 	return c.root.CallUnary(ctx, req)
 }
 
+// Delay calls infrabin.v1.InfrabinService.Delay.
+func (c *infrabinServiceClient) Delay(ctx context.Context, req *connect_go.Request[v1.DelayRequest]) (*connect_go.Response[v1.DelayResponse], error) {
+	return c.delay.CallUnary(ctx, req)
+}
+
 // InfrabinServiceHandler is an implementation of the infrabin.v1.InfrabinService service.
 type InfrabinServiceHandler interface {
 	Headers(context.Context, *connect_go.Request[v1.HeadersRequest]) (*connect_go.Response[v1.HeadersResponse], error)
 	Env(context.Context, *connect_go.Request[v1.EnvRequest]) (*connect_go.Response[v1.EnvResponse], error)
 	Root(context.Context, *connect_go.Request[v1.RootRequest]) (*connect_go.Response[v1.RootResponse], error)
+	Delay(context.Context, *connect_go.Request[v1.DelayRequest]) (*connect_go.Response[v1.DelayResponse], error)
 }
 
 // NewInfrabinServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -111,6 +124,11 @@ func NewInfrabinServiceHandler(svc InfrabinServiceHandler, opts ...connect_go.Ha
 		svc.Root,
 		opts...,
 	))
+	mux.Handle("/infrabin.v1.InfrabinService/Delay", connect_go.NewUnaryHandler(
+		"/infrabin.v1.InfrabinService/Delay",
+		svc.Delay,
+		opts...,
+	))
 	return "/infrabin.v1.InfrabinService/", mux
 }
 
@@ -127,4 +145,8 @@ func (UnimplementedInfrabinServiceHandler) Env(context.Context, *connect_go.Requ
 
 func (UnimplementedInfrabinServiceHandler) Root(context.Context, *connect_go.Request[v1.RootRequest]) (*connect_go.Response[v1.RootResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("infrabin.v1.InfrabinService.Root is not implemented"))
+}
+
+func (UnimplementedInfrabinServiceHandler) Delay(context.Context, *connect_go.Request[v1.DelayRequest]) (*connect_go.Response[v1.DelayResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("infrabin.v1.InfrabinService.Delay is not implemented"))
 }

@@ -71,6 +71,8 @@ func TestInfrabinService(t *testing.T) {
 				t.Errorf("not enought environment variables got: %d, want at least 2", len(result.Msg.Environment))
 			}
 
+			// If key is set, return that envinronment variable
+			// or 404 if it does not exist
 			result, err = client.Env(context.Background(), connect.NewRequest(&infrabinv1.EnvRequest{Key: "KEY_1"}))
 			if err != nil {
 				t.Error("error calling env endpoint", err)
@@ -83,8 +85,6 @@ func TestInfrabinService(t *testing.T) {
 			if connect.CodeOf(err) != connect.CodeNotFound {
 				t.Errorf("got: %v, wanted: %v", connect.CodeOf(err), connect.CodeNotFound)
 			}
-
 		}
 	})
-
 }

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package infrabin.v1;
 
+import "google/type/duration.proto";
+
 option go_package = "github.com/maruina/go-infrabin/gen/infrabin/v1;infrabinv1";
 
 message HeadersRequest {}
@@ -24,8 +26,15 @@ message RootResponse {
   string hostname = 1;
 }
 
+message DelayRequest {
+  google.protobuf.Duration seconds = 1;
+}
+
+message DelayResponse {}
+
 service InfrabinService {
   rpc Headers(HeadersRequest) returns (HeadersResponse) {}
   rpc Env(EnvRequest) returns (EnvResponse) {}
   rpc Root(RootRequest) returns (RootResponse) {}
+  rpc Delay(DelayRequest) returns (DelayResponse) {}
 }
