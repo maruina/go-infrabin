@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package infrabin.v1;
 
-import "google/type/duration.proto";
+import "google/protobuf/duration.proto";
 
 option go_package = "github.com/maruina/go-infrabin/gen/infrabin/v1;infrabinv1";
 
