@@ -31,6 +31,7 @@ type InfrabinServiceClient interface {
 	Env(context.Context, *connect_go.Request[v1.EnvRequest]) (*connect_go.Response[v1.EnvResponse], error)
 	Root(context.Context, *connect_go.Request[v1.RootRequest]) (*connect_go.Response[v1.RootResponse], error)
 	Delay(context.Context, *connect_go.Request[v1.DelayRequest]) (*connect_go.Response[v1.DelayResponse], error)
+	Proxy(context.Context, *connect_go.Request[v1.ProxyRequest]) (*connect_go.Response[v1.ProxyResponse], error)
 }
 
 // NewInfrabinServiceClient constructs a client for the infrabin.v1.InfrabinService service. By
@@ -63,6 +64,11 @@ func NewInfrabinServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 			baseURL+"/infrabin.v1.InfrabinService/Delay",
 			opts...,
 		),
+		proxy: connect_go.NewClient[v1.ProxyRequest, v1.ProxyResponse](
+			httpClient,
+			baseURL+"/infrabin.v1.InfrabinService/Proxy",
+			opts...,
+		),
 	}
 }
 
@@ -72,6 +78,7 @@ type infrabinServiceClient struct {
 	env     *connect_go.Client[v1.EnvRequest, v1.EnvResponse]
 	root    *connect_go.Client[v1.RootRequest, v1.RootResponse]
 	delay   *connect_go.Client[v1.DelayRequest, v1.DelayResponse]
+	proxy   *connect_go.Client[v1.ProxyRequest, v1.ProxyResponse]
 }
 
 // Headers calls infrabin.v1.InfrabinService.Headers.
@@ -94,12 +101,18 @@ func (c *infrabinServiceClient) Delay(ctx context.Context, req *connect_go.Reque
 	return c.delay.CallUnary(ctx, req)
 }
 
+// Proxy calls infrabin.v1.InfrabinService.Proxy.
+func (c *infrabinServiceClient) Proxy(ctx context.Context, req *connect_go.Request[v1.ProxyRequest]) (*connect_go.Response[v1.ProxyResponse], error) {
+	return c.proxy.CallUnary(ctx, req)
+}
+
 // InfrabinServiceHandler is an implementation of the infrabin.v1.InfrabinService service.
 type InfrabinServiceHandler interface {
 	Headers(context.Context, *connect_go.Request[v1.HeadersRequest]) (*connect_go.Response[v1.HeadersResponse], error)
 	Env(context.Context, *connect_go.Request[v1.EnvRequest]) (*connect_go.Response[v1.EnvResponse], error)
 	Root(context.Context, *connect_go.Request[v1.RootRequest]) (*connect_go.Response[v1.RootResponse], error)
 	Delay(context.Context, *connect_go.Request[v1.DelayRequest]) (*connect_go.Response[v1.DelayResponse], error)
+	Proxy(context.Context, *connect_go.Request[v1.ProxyRequest]) (*connect_go.Response[v1.ProxyResponse], error)
 }
 
 // NewInfrabinServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -129,6 +142,11 @@ func NewInfrabinServiceHandler(svc InfrabinServiceHandler, opts ...connect_go.Ha
 		svc.Delay,
 		opts...,
 	))
+	mux.Handle("/infrabin.v1.InfrabinService/Proxy", connect_go.NewUnaryHandler(
+		"/infrabin.v1.InfrabinService/Proxy",
+		svc.Proxy,
+		opts...,
+	))
 	return "/infrabin.v1.InfrabinService/", mux
 }
 
@@ -149,4 +167,8 @@ func (UnimplementedInfrabinServiceHandler) Root(context.Context, *connect_go.Req
 
 func (UnimplementedInfrabinServiceHandler) Delay(context.Context, *connect_go.Request[v1.DelayRequest]) (*connect_go.Response[v1.DelayResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("infrabin.v1.InfrabinService.Delay is not implemented"))
+}
+
+func (UnimplementedInfrabinServiceHandler) Proxy(context.Context, *connect_go.Request[v1.ProxyRequest]) (*connect_go.Response[v1.ProxyResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("infrabin.v1.InfrabinService.Proxy is not implemented"))
 }

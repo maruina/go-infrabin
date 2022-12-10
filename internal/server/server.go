@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -66,5 +68,36 @@ func (s *InfrabinServer) Delay(ctx context.Context, req *connect.Request[infrabi
 
 	res := connect.NewResponse(&infrabinv1.DelayResponse{})
 
+	return res, nil
+}
+
+func (s *InfrabinServer) Proxy(ctx context.Context, req *connect.Request[infrabinv1.ProxyRequest]) (*connect.Response[infrabinv1.ProxyResponse], error) {
+	outReq, err := http.NewRequestWithContext(ctx, req.Msg.Method, req.Msg.Url, nil)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	for k, v := range req.Msg.Headers {
+		outReq.Header.Set(k, v)
+	}
+
+	// Send http request
+	client := http.Client{Timeout: 5 * time.Second}
+	outRes, err := client.Do(outReq)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Read request body and close it
+	_, err = io.ReadAll(outRes.Body)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if err = outRes.Body.Close(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	res := connect.NewResponse(&infrabinv1.ProxyResponse{
+		Code: int32(outRes.StatusCode),
+	})
 	return res, nil
 }

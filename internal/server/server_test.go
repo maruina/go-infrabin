@@ -45,7 +45,7 @@ func TestInfrabinService(t *testing.T) {
 				t.Error("error calling root endpoint", err)
 			}
 			if result.Msg.Hostname != hostname {
-				t.Errorf("hostname error, got: %v, want: %v", result.Msg.Hostname, hostname)
+				t.Errorf("got: %v, wanted: %v", result.Msg.Hostname, hostname)
 			}
 		}
 	})
@@ -102,7 +102,7 @@ func TestInfrabinService(t *testing.T) {
 			}
 			end := time.Since(start)
 			if end < s {
-				t.Errorf("delay error, wanted: %v, got: %v", s, end)
+				t.Errorf("got: %v, wanted: %v", s, end)
 			}
 		}
 	})
