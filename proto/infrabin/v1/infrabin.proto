@@ -27,7 +27,7 @@ message RootResponse {
 }
 
 message DelayRequest {
-  google.protobuf.Duration seconds = 1;
+  google.protobuf.Duration duration = 1;
 }
 
 message DelayResponse {}

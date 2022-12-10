@@ -62,7 +62,7 @@ func (s *InfrabinServer) Root(ctx context.Context, req *connect.Request[infrabin
 }
 
 func (s *InfrabinServer) Delay(ctx context.Context, req *connect.Request[infrabinv1.DelayRequest]) (*connect.Response[infrabinv1.DelayResponse], error) {
-	time.Sleep(req.Msg.Seconds.AsDuration())
+	time.Sleep(req.Msg.Duration.AsDuration())
 
 	res := connect.NewResponse(&infrabinv1.DelayResponse{})
 

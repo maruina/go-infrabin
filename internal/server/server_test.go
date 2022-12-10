@@ -6,10 +6,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/bufbuild/connect-go"
 	infrabinv1 "github.com/maruina/go-infrabin/gen/infrabin/v1"
 	"github.com/maruina/go-infrabin/gen/infrabin/v1/infrabinv1connect"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func TestInfrabinService(t *testing.T) {
@@ -84,6 +86,23 @@ func TestInfrabinService(t *testing.T) {
 			_, err = client.Env(context.Background(), connect.NewRequest(&infrabinv1.EnvRequest{Key: "KEY_NOT_EXIST"}))
 			if connect.CodeOf(err) != connect.CodeNotFound {
 				t.Errorf("got: %v, wanted: %v", connect.CodeOf(err), connect.CodeNotFound)
+			}
+		}
+	})
+
+	t.Run("delay endpoint", func(t *testing.T) {
+		s := time.Second * 1
+		for _, client := range clients {
+			start := time.Now()
+			_, err := client.Delay(context.Background(), connect.NewRequest(&infrabinv1.DelayRequest{
+				Duration: durationpb.New(s),
+			}))
+			if err != nil {
+				t.Error("error calling delay endpoint", err)
+			}
+			end := time.Since(start)
+			if end < s {
+				t.Errorf("delay error, wanted: %v, got: %v", s, end)
 			}
 		}
 	})
