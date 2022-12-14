@@ -39,7 +39,7 @@ message ProxyRequest {
 }
 
 message ProxyResponse {
-  int32 code = 1;
+  int32 status_code = 1;
   map<string, string> headers = 2;
 }
 

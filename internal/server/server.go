@@ -72,32 +72,38 @@ func (s *InfrabinServer) Delay(ctx context.Context, req *connect.Request[infrabi
 }
 
 func (s *InfrabinServer) Proxy(ctx context.Context, req *connect.Request[infrabinv1.ProxyRequest]) (*connect.Response[infrabinv1.ProxyResponse], error) {
-	outReq, err := http.NewRequestWithContext(ctx, req.Msg.Method, req.Msg.Url, nil)
+	outboundReq, err := http.NewRequestWithContext(ctx, req.Msg.Method, req.Msg.Url, nil)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	for k, v := range req.Msg.Headers {
-		outReq.Header.Set(k, v)
+		outboundReq.Header.Set(k, v)
 	}
 
 	// Send http request
 	client := http.Client{Timeout: 5 * time.Second}
-	outRes, err := client.Do(outReq)
+	outboundRes, err := client.Do(outboundReq)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	// Read request body and close it
-	_, err = io.ReadAll(outRes.Body)
+	_, err = io.ReadAll(outboundRes.Body)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	if err = outRes.Body.Close(); err != nil {
+	if err = outboundRes.Body.Close(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	res := connect.NewResponse(&infrabinv1.ProxyResponse{
-		Code: int32(outRes.StatusCode),
+		StatusCode: int32(outboundRes.StatusCode),
+		Headers:    make(map[string]string),
 	})
+	for k, vv := range outboundRes.Header {
+		for _, v := range vv {
+			res.Msg.Headers[k] = v
+		}
+	}
 	return res, nil
 }

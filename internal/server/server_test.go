@@ -106,4 +106,31 @@ func TestInfrabinService(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("proxy endpoint", func(t *testing.T) {
+		headers := map[string]string{
+			"Foo": "Bar",
+		}
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Foo", headers["Foo"])
+			w.WriteHeader(200)
+		}))
+
+		for _, client := range clients {
+			res, err := client.Proxy(context.Background(), connect.NewRequest(&infrabinv1.ProxyRequest{
+				Url:     srv.URL,
+				Method:  "GET",
+				Headers: headers,
+			}))
+			if err != nil {
+				t.Error("error calling proxy endpoint", err)
+			}
+			if res.Msg.StatusCode != 200 {
+				t.Errorf("error proxy endpoint status code, got: %q, want: %q", res.Msg.StatusCode, 200)
+			}
+			if res.Msg.Headers["Foo"] != headers["Foo"] {
+				t.Errorf("error proxy endpoint headers, got: %v, want: %v", res.Msg.Headers["Foo"], headers["Foo"])
+			}
+		}
+	})
 }
