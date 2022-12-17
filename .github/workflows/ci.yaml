@@ -28,6 +28,13 @@ jobs:
         run: make test && make checkgenerate
       - name: make-lint
         run: make lint
+      - name: Build the docker image
+        uses: docker/build-push-action@v3.2.0
+        with:
+          push: false
+          tags: |
+            docker.io/maruina/go-infrabin:latest
+            ghcr.io/maruina/go-infrabin:latest
 
   docker-build-push:
     if: github.ref == 'refs/heads/main'
@@ -44,7 +51,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push latest docker image on master
-        uses: docker/build-push-action@v3.0.0
+        uses: docker/build-push-action@v3.2.0
         with:
           push: true
           tags: |

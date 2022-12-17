@@ -12,12 +12,6 @@
 
 * `8888` as a HTTP/gRPC port
 
-## Installation with Helm
-
-See the [Helm Chart README](./chart/go-infrabin/README.md).
-
-## Usage
-
 ```console
 Usage:
   go-infrabin [flags]
@@ -32,10 +26,9 @@ Flags:
       --write-timeout duration         HTTP write timeout (default 15s)
 ```
 
-## Environment variables
+## Installation with Helm
 
-* `INFRABIN_MAX_DELAY`: to change the maximum value for the `/delay` endpoint. Default to 120.
-* `FAIL_ROOT_HANDLER`: if set, the `/` endpoint will return a 503. This is useful when doing a B/G deployment to test the failure and rollback scenario.
+See the [Helm Chart README](./chart/go-infrabin/README.md).
 
 ## Service Endpoints
 
@@ -204,19 +197,6 @@ Flags:
   ```json
   {"intermittent":{"consecutive_errors":2}
   ```
-
-## Errors
-
-When calling the http endpoint, errors are mapped by `grpc-gateway`. They have the following format:
-
-* _returns_:
-
-```json
-{
-    "code": 3,
-    "message": "type mismatch, parameter: duration, error: strconv.ParseInt: parsing \"21asd\": invalid syntax"
-}
-```
 
 ### Contributing
 

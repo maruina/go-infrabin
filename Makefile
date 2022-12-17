@@ -7,8 +7,6 @@ MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --no-print-directory
 BIN=$(abspath .tmp/bin)
-COPYRIGHT_YEARS := 2022
-LICENSE_IGNORE := -e /testdata/
 # Set to use a different compiler. For example, `GO=go1.18rc1 make test`.
 GO ?= go
 
@@ -32,7 +30,7 @@ test: build ## Run unit tests
 
 .PHONY: build
 build: generate ## Build all packages
-	$(GO) build ./...
+	$(GO) build -o go-infrabin main.go
 
 .PHONY: lint
 lint: $(BIN)/golangci-lint $(BIN)/buf ## Lint Go and protobuf
