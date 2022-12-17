@@ -1,7 +1,6 @@
 # go-infrabin
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/maruina/go-infrabin)](https://goreportcard.com/report/github.com/maruina/go-infrabin)
-[![Coverage Status](https://coveralls.io/repos/github/maruina/go-infrabin/badge.svg?branch=master)](https://coveralls.io/github/maruina/go-infrabin?branch=master)
 
 [infrabin](https://github.com/maruina/infrabin) written in go.
 
@@ -9,35 +8,29 @@
 
 ## Usage
 
-`go-infrabin` exposes three ports:
+`go-infrabin` exposes one ports:
 
-* `8888` as a http rest port
-* `8887` as http Prometheus port
-* `50051` as a grpc port
+* `8888` as a HTTP/gRPC port
 
-## Installation
+## Installation with Helm
 
-See the [README](./chart/go-infrabin/README.md).
+See the [Helm Chart README](./chart/go-infrabin/README.md).
 
-## Command line flags
+## Usage
 
-* `--aws-metadata-endpoint`: AWS Metadata Endpoint (default `http://169.254.169.254/latest/meta-data/`)
-* `--drain-timeout`: Drain timeout (default `15s`)
-* `--enable-proxy-endpoint`: When enabled allows `/proxy` and `/aws` endpoints
-* `--proxy-allow-regexp`: Regular expression to allow URL called by the `/proxy` endpoint (default `".*"`)
-* `--intermittent-errors`: Number of consecutive 503 errors before returning 200 when calling the `/intermittent` endpoint (default `2`)
-* `--grpc-host`: gRPC host (default `0.0.0.0`)
-* `--grpc-port`: gRPC port (default `50051`)
-* `-h`, `--help`: Help for go-infrabin
-* `--http-idle-timeout`: HTTP idle timeout (default `15s`)
-* `--http-read-header-timeout`: HTTP read header timeout (default `15s`)
-* `--http-read-timeout`: HTTP read timeout (default `1m0s`)
-* `--http-write-timeout`: HTTP write timeout (default `2m1s`)
-* `--max-delay duration`: Maximum delay (default `2m0s`)
-* `--prom-host`: Prometheus metrics host (default `0.0.0.0`)
-* `--prom-port`: Prometheus metrics port (default `8887`)
-* `--server-host`: HTTP server host (default `0.0.0.0`)
-* `--server-port`: HTTP server port (default `8888`)
+```console
+Usage:
+  go-infrabin [flags]
+
+Flags:
+      --addr string                    TCP address for the server to listen on (default ":8888")
+      --drain-timeout duration         Drain timeout to wait for in-flight connections to terminate before closing the connection (default 1m0s)
+  -h, --help                           help for go-infrabin
+      --idle-timeout duration          HTTP idle timeout (default 15s)
+      --read-header-timeout duration   HTTP read header timeout (default 15s)
+      --read-timeout duration          HTTP read timeout (default 1m0s)
+      --write-timeout duration         HTTP write timeout (default 15s)
+```
 
 ## Environment variables
 

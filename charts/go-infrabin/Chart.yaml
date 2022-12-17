@@ -1,7 +1,6 @@
 apiVersion: v2
 name: go-infrabin
 description: A Helm chart for Kubernetes installation of go-infrabin - infrabin written in go
-engine: gotpl
 home: https://github.com/maruina/go-infrabin
 sources:
   - https://github.com/maruin/go-infrabin/tree/master
