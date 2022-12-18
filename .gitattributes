@@ -1,4 +1,1 @@
-pkg/infrabin/infrabin.pb.go linguist-generated=true
-pkg/infrabin/infrabin.pb.gw.go linguist-generated=true
-pkg/infrabin/infrabin_grpc.pb.go linguist-generated=true
-protoc/google/** linguist-generated=true
+gen/** linguist-generated=true
