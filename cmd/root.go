@@ -9,11 +9,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/maruina/go-infrabin/gen/infrabin/v1/infrabinv1connect"
-	"github.com/maruina/go-infrabin/internal/server"
+	grpchealth "github.com/bufbuild/connect-grpchealth-go"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+
+	"github.com/maruina/go-infrabin/gen/infrabin/v1/infrabinv1connect"
+	"github.com/maruina/go-infrabin/internal/server"
 )
 
 var (
@@ -56,6 +58,12 @@ func run(cmd *cobra.Command, args []string) {
 	mux := http.NewServeMux()
 	path, handler := infrabinv1connect.NewInfrabinServiceHandler(infrabinServer)
 	mux.Handle(path, handler)
+
+	checker := grpchealth.NewStaticChecker(
+		infrabinv1connect.InfrabinServiceName,
+	)
+	mux.Handle(grpchealth.NewHandler(checker))
+
 	srv := &http.Server{
 		Addr: addr,
 		// Use h2c so we can serve HTTP/2 without TLS.
