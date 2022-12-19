@@ -51,6 +51,14 @@ message AWSAssumeRoleResponse {
   string assumed_role_id = 1;
 }
 
+message AWSGetCallerIdentityRequest {}
+
+message AWSGetCallerIdentityResponse {
+  string account = 1;
+  string arn = 2;
+  string user_id = 3;
+}
+
 service InfrabinService {
   rpc Headers(HeadersRequest) returns (HeadersResponse) {}
   rpc Env(EnvRequest) returns (EnvResponse) {}
@@ -58,4 +66,5 @@ service InfrabinService {
   rpc Delay(DelayRequest) returns (DelayResponse) {}
   rpc Proxy(ProxyRequest) returns (ProxyResponse) {}
   rpc AWSAssumeRole(AWSAssumeRoleRequest) returns (AWSAssumeRoleResponse) {}
+  rpc AWSGetCallerIdentity(AWSGetCallerIdentityRequest) returns (AWSGetCallerIdentityResponse) {}
 }

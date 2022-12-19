@@ -128,3 +128,17 @@ func (s *InfrabinServer) AWSAssumeRole(ctx context.Context, req *connect.Request
 	})
 	return res, nil
 }
+
+func (s *InfrabinServer) AWSGetCallerIdentity(ctx context.Context, req *connect.Request[infrabinv1.AWSGetCallerIdentityRequest]) (*connect.Response[infrabinv1.AWSGetCallerIdentityResponse], error) {
+	stsRes, err := aws.STSGetCallerIdentity(ctx, s.STSClient)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	res := connect.NewResponse(&infrabinv1.AWSGetCallerIdentityResponse{
+		Account: *stsRes.Account,
+		Arn:     *stsRes.Arn,
+		UserId:  *stsRes.UserId,
+	})
+	return res, nil
+}

@@ -150,6 +150,13 @@ func TestInfrabinService(t *testing.T) {
 				t.Error("error calling aws assume role endpoint with empty role", err)
 			}
 
+			_, err = client.AWSAssumeRole(context.Background(), connect.NewRequest(&infrabinv1.AWSAssumeRoleRequest{
+				Role: "invalid",
+			}))
+			if connect.CodeOf(err) != connect.CodeInternal {
+				t.Errorf("error calling aws assume role endpoint with invalid role got: %v, wanted %v", connect.CodeOf(err), connect.CodeInternal)
+			}
+
 			res, err := client.AWSAssumeRole(context.Background(), connect.NewRequest(&infrabinv1.AWSAssumeRoleRequest{
 				Role: arn,
 			}))
@@ -157,7 +164,30 @@ func TestInfrabinService(t *testing.T) {
 				t.Error("error calling aws assume role endpoint", err)
 			}
 			if !reflect.DeepEqual(res.Msg.AssumedRoleId, responseString) {
-				t.Errorf("handler returned unexpected body: got %v want %s", res.Msg.AssumedRoleId, responseString)
+				t.Errorf("handler returned unexpected role id: got %v want %s", res.Msg.AssumedRoleId, responseString)
+			}
+		}
+	})
+
+	t.Run("aws get caller identity endpoint", func(t *testing.T) {
+		accountId := "123456789012"
+		arn := "arn:aws:iam::123456789012:role/my_role"
+		userId := "AIDAJQABLZS4A3QDU576Q"
+
+		for _, client := range clients {
+			res, err := client.AWSGetCallerIdentity(context.Background(), connect.NewRequest(&infrabinv1.AWSGetCallerIdentityRequest{}))
+			if connect.CodeOf(err) != connect.CodeInternal {
+				t.Error("error calling aws get caller identity", err)
+			}
+
+			if res.Msg.Account != accountId {
+				t.Errorf("handler returned unexpected account: got %v want %s", res.Msg.Account, accountId)
+			}
+			if res.Msg.Arn != arn {
+				t.Errorf("handler returned unexpected arn: got %v want %s", res.Msg.Arn, arn)
+			}
+			if res.Msg.UserId != userId {
+				t.Errorf("handler returned unexpected user_id: got %v want %s", res.Msg.UserId, userId)
 			}
 		}
 	})
