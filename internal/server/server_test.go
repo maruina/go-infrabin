@@ -5,19 +5,23 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/bufbuild/connect-go"
 	infrabinv1 "github.com/maruina/go-infrabin/gen/infrabin/v1"
 	"github.com/maruina/go-infrabin/gen/infrabin/v1/infrabinv1connect"
+	"github.com/maruina/go-infrabin/internal/aws"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func TestInfrabinService(t *testing.T) {
 	t.Parallel()
 	mux := http.NewServeMux()
-	mux.Handle(infrabinv1connect.NewInfrabinServiceHandler(&InfrabinServer{}))
+	mux.Handle(infrabinv1connect.NewInfrabinServiceHandler(&InfrabinServer{
+		STSClient: aws.FakeSTSClient{},
+	}))
 	server := httptest.NewUnstartedServer(mux)
 	server.EnableHTTP2 = true
 	server.StartTLS()
@@ -130,6 +134,30 @@ func TestInfrabinService(t *testing.T) {
 			}
 			if res.Msg.Headers["Foo"] != headers["Foo"] {
 				t.Errorf("error proxy endpoint headers, got: %v, want: %v", res.Msg.Headers["Foo"], headers["Foo"])
+			}
+		}
+	})
+
+	t.Run("aws assume role endpoint", func(t *testing.T) {
+		arn := "arn:aws:sts::123456789012:assumed-role/xaccounts3access/s3-access-example"
+		responseString := "AROA3XFRBF535PLBIFPI4:s3-access-example"
+
+		for _, client := range clients {
+			_, err := client.AWSAssumeRole(context.Background(), connect.NewRequest(&infrabinv1.AWSAssumeRoleRequest{
+				Role: "",
+			}))
+			if connect.CodeOf(err) != connect.CodeInvalidArgument {
+				t.Error("error calling aws assume role endpoint with empty role", err)
+			}
+
+			res, err := client.AWSAssumeRole(context.Background(), connect.NewRequest(&infrabinv1.AWSAssumeRoleRequest{
+				Role: arn,
+			}))
+			if err != nil {
+				t.Error("error calling aws assume role endpoint", err)
+			}
+			if !reflect.DeepEqual(res.Msg.AssumedRoleId, responseString) {
+				t.Errorf("handler returned unexpected body: got %v want %s", res.Msg.AssumedRoleId, responseString)
 			}
 		}
 	})

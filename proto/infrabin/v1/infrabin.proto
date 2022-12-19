@@ -43,10 +43,19 @@ message ProxyResponse {
   map<string, string> headers = 2;
 }
 
+message AWSAssumeRoleRequest {
+  string role = 1;
+}
+
+message AWSAssumeRoleResponse {
+  string assumed_role_id = 1;
+}
+
 service InfrabinService {
   rpc Headers(HeadersRequest) returns (HeadersResponse) {}
   rpc Env(EnvRequest) returns (EnvResponse) {}
   rpc Root(RootRequest) returns (RootResponse) {}
   rpc Delay(DelayRequest) returns (DelayResponse) {}
   rpc Proxy(ProxyRequest) returns (ProxyResponse) {}
+  rpc AWSAssumeRole(AWSAssumeRoleRequest) returns (AWSAssumeRoleResponse) {}
 }

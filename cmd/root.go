@@ -15,6 +15,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/maruina/go-infrabin/gen/infrabin/v1/infrabinv1connect"
+	"github.com/maruina/go-infrabin/internal/aws"
 	"github.com/maruina/go-infrabin/internal/server"
 )
 
@@ -54,7 +55,13 @@ func init() {
 }
 
 func run(cmd *cobra.Command, args []string) {
-	infrabinServer := &server.InfrabinServer{}
+	stsClient, err := aws.GetSTSClient()
+	if err != nil {
+		log.Fatalf("error creating the AWS STS client: %v", err)
+	}
+	infrabinServer := &server.InfrabinServer{
+		STSClient: stsClient,
+	}
 	mux := http.NewServeMux()
 	path, handler := infrabinv1connect.NewInfrabinServiceHandler(infrabinServer)
 	mux.Handle(path, handler)

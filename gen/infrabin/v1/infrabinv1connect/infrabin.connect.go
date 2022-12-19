@@ -32,6 +32,7 @@ type InfrabinServiceClient interface {
 	Root(context.Context, *connect_go.Request[v1.RootRequest]) (*connect_go.Response[v1.RootResponse], error)
 	Delay(context.Context, *connect_go.Request[v1.DelayRequest]) (*connect_go.Response[v1.DelayResponse], error)
 	Proxy(context.Context, *connect_go.Request[v1.ProxyRequest]) (*connect_go.Response[v1.ProxyResponse], error)
+	AWSAssumeRole(context.Context, *connect_go.Request[v1.AWSAssumeRoleRequest]) (*connect_go.Response[v1.AWSAssumeRoleResponse], error)
 }
 
 // NewInfrabinServiceClient constructs a client for the infrabin.v1.InfrabinService service. By
@@ -69,16 +70,22 @@ func NewInfrabinServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 			baseURL+"/infrabin.v1.InfrabinService/Proxy",
 			opts...,
 		),
+		aWSAssumeRole: connect_go.NewClient[v1.AWSAssumeRoleRequest, v1.AWSAssumeRoleResponse](
+			httpClient,
+			baseURL+"/infrabin.v1.InfrabinService/AWSAssumeRole",
+			opts...,
+		),
 	}
 }
 
 // infrabinServiceClient implements InfrabinServiceClient.
 type infrabinServiceClient struct {
-	headers *connect_go.Client[v1.HeadersRequest, v1.HeadersResponse]
-	env     *connect_go.Client[v1.EnvRequest, v1.EnvResponse]
-	root    *connect_go.Client[v1.RootRequest, v1.RootResponse]
-	delay   *connect_go.Client[v1.DelayRequest, v1.DelayResponse]
-	proxy   *connect_go.Client[v1.ProxyRequest, v1.ProxyResponse]
+	headers       *connect_go.Client[v1.HeadersRequest, v1.HeadersResponse]
+	env           *connect_go.Client[v1.EnvRequest, v1.EnvResponse]
+	root          *connect_go.Client[v1.RootRequest, v1.RootResponse]
+	delay         *connect_go.Client[v1.DelayRequest, v1.DelayResponse]
+	proxy         *connect_go.Client[v1.ProxyRequest, v1.ProxyResponse]
+	aWSAssumeRole *connect_go.Client[v1.AWSAssumeRoleRequest, v1.AWSAssumeRoleResponse]
 }
 
 // Headers calls infrabin.v1.InfrabinService.Headers.
@@ -106,6 +113,11 @@ func (c *infrabinServiceClient) Proxy(ctx context.Context, req *connect_go.Reque
 	return c.proxy.CallUnary(ctx, req)
 }
 
+// AWSAssumeRole calls infrabin.v1.InfrabinService.AWSAssumeRole.
+func (c *infrabinServiceClient) AWSAssumeRole(ctx context.Context, req *connect_go.Request[v1.AWSAssumeRoleRequest]) (*connect_go.Response[v1.AWSAssumeRoleResponse], error) {
+	return c.aWSAssumeRole.CallUnary(ctx, req)
+}
+
 // InfrabinServiceHandler is an implementation of the infrabin.v1.InfrabinService service.
 type InfrabinServiceHandler interface {
 	Headers(context.Context, *connect_go.Request[v1.HeadersRequest]) (*connect_go.Response[v1.HeadersResponse], error)
@@ -113,6 +125,7 @@ type InfrabinServiceHandler interface {
 	Root(context.Context, *connect_go.Request[v1.RootRequest]) (*connect_go.Response[v1.RootResponse], error)
 	Delay(context.Context, *connect_go.Request[v1.DelayRequest]) (*connect_go.Response[v1.DelayResponse], error)
 	Proxy(context.Context, *connect_go.Request[v1.ProxyRequest]) (*connect_go.Response[v1.ProxyResponse], error)
+	AWSAssumeRole(context.Context, *connect_go.Request[v1.AWSAssumeRoleRequest]) (*connect_go.Response[v1.AWSAssumeRoleResponse], error)
 }
 
 // NewInfrabinServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -147,6 +160,11 @@ func NewInfrabinServiceHandler(svc InfrabinServiceHandler, opts ...connect_go.Ha
 		svc.Proxy,
 		opts...,
 	))
+	mux.Handle("/infrabin.v1.InfrabinService/AWSAssumeRole", connect_go.NewUnaryHandler(
+		"/infrabin.v1.InfrabinService/AWSAssumeRole",
+		svc.AWSAssumeRole,
+		opts...,
+	))
 	return "/infrabin.v1.InfrabinService/", mux
 }
 
@@ -171,4 +189,8 @@ func (UnimplementedInfrabinServiceHandler) Delay(context.Context, *connect_go.Re
 
 func (UnimplementedInfrabinServiceHandler) Proxy(context.Context, *connect_go.Request[v1.ProxyRequest]) (*connect_go.Response[v1.ProxyResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("infrabin.v1.InfrabinService.Proxy is not implemented"))
+}
+
+func (UnimplementedInfrabinServiceHandler) AWSAssumeRole(context.Context, *connect_go.Request[v1.AWSAssumeRoleRequest]) (*connect_go.Response[v1.AWSAssumeRoleResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("infrabin.v1.InfrabinService.AWSAssumeRole is not implemented"))
 }
