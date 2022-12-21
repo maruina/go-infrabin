@@ -176,7 +176,7 @@ func TestInfrabinService(t *testing.T) {
 
 		for _, client := range clients {
 			res, err := client.AWSGetCallerIdentity(context.Background(), connect.NewRequest(&infrabinv1.AWSGetCallerIdentityRequest{}))
-			if connect.CodeOf(err) != connect.CodeInternal {
+			if err != nil {
 				t.Error("error calling aws get caller identity", err)
 			}
 
