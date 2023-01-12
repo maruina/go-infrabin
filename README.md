@@ -8,9 +8,7 @@
 
 ## Usage
 
-`go-infrabin` exposes one ports:
-
-* `8888` as a HTTP/gRPC port
+`go-infrabin` exposes expose port `8888` as a HTTP/gRPC port using the [connect](https://connect.build/) protocol.
 
 ```console
 Usage:
