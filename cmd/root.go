@@ -20,12 +20,14 @@ import (
 )
 
 var (
-	addr              string
-	drainTimeout      time.Duration
-	idleTimeout       time.Duration
-	readHeaderTimeout time.Duration
-	readTimeout       time.Duration
-	writeTimeout      time.Duration
+	addr                 string
+	drainTimeout         time.Duration
+	idleTimeout          time.Duration
+	proxyAllowedURLRegex string
+	proxyHTTPTimeout     time.Duration
+	readHeaderTimeout    time.Duration
+	readTimeout          time.Duration
+	writeTimeout         time.Duration
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -51,6 +53,8 @@ func init() {
 	rootCmd.Flags().DurationVar(&readTimeout, "read-timeout", 60*time.Second, "HTTP read timeout")
 	rootCmd.Flags().DurationVar(&writeTimeout, "write-timeout", 15*time.Second, "HTTP write timeout")
 	rootCmd.Flags().StringVar(&addr, "addr", ":8888", "TCP address for the server to listen on")
+	rootCmd.Flags().DurationVar(&proxyHTTPTimeout, "proxy-http-timeout", 5*time.Second, "HTTP timeout for outbound calls via the proxy endopoint")
+	rootCmd.Flags().StringVar(&proxyAllowedURLRegex, "proxy-allowed-url-regex", ".*", "Regexp to allow URLs via the proxy endopoint")
 
 }
 
@@ -60,7 +64,9 @@ func run(cmd *cobra.Command, args []string) {
 		log.Fatalf("error creating the AWS STS client: %v", err)
 	}
 	infrabinServer := &server.InfrabinServer{
-		STSClient: stsClient,
+		STSClient:            stsClient,
+		ProxyAllowedURLRegex: proxyAllowedURLRegex,
+		ProxyHTTPTimeout:     proxyHTTPTimeout,
 	}
 	mux := http.NewServeMux()
 	path, handler := infrabinv1connect.NewInfrabinServiceHandler(infrabinServer)

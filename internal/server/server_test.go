@@ -20,7 +20,9 @@ func TestInfrabinService(t *testing.T) {
 	t.Parallel()
 	mux := http.NewServeMux()
 	mux.Handle(infrabinv1connect.NewInfrabinServiceHandler(&InfrabinServer{
-		STSClient: aws.FakeSTSClient{},
+		STSClient:            aws.FakeSTSClient{},
+		ProxyAllowedURLRegex: ".*",
+		ProxyHTTPTimeout:     5 * time.Second,
 	}))
 	server := httptest.NewUnstartedServer(mux)
 	server.EnableHTTP2 = true

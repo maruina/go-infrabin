@@ -15,13 +15,15 @@ Usage:
   go-infrabin [flags]
 
 Flags:
-      --addr string                    TCP address for the server to listen on (default ":8888")
-      --drain-timeout duration         Drain timeout to wait for in-flight connections to terminate before closing the connection (default 1m0s)
-  -h, --help                           help for go-infrabin
-      --idle-timeout duration          HTTP idle timeout (default 15s)
-      --read-header-timeout duration   HTTP read header timeout (default 15s)
-      --read-timeout duration          HTTP read timeout (default 1m0s)
-      --write-timeout duration         HTTP write timeout (default 15s)
+      --addr string                      TCP address for the server to listen on (default ":8888")
+      --drain-timeout duration           Drain timeout to wait for in-flight connections to terminate before closing the connection (default 1m0s)
+  -h, --help                             help for go-infrabin
+      --idle-timeout duration            HTTP idle timeout (default 15s)
+      --proxy-allowed-url-regex string   Regexp to allow URLs via the proxy endopoint (default ".*")
+      --proxy-http-timeout duration      HTTP timeout for outbound calls via the proxy endopoint (default 5s)
+      --read-header-timeout duration     HTTP read header timeout (default 15s)
+      --read-timeout duration            HTTP read timeout (default 1m0s)
+      --write-timeout duration           HTTP write timeout (default 15s)
 ```
 
 ## Examples

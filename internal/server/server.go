@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,7 +17,9 @@ import (
 const AWSAssumeRoleSessionName = "go-infrabin-aws-assume-role-endpoint"
 
 type InfrabinServer struct {
-	STSClient aws.STSApi
+	STSClient            aws.STSApi
+	ProxyAllowedURLRegex string
+	ProxyHTTPTimeout     time.Duration
 }
 
 func (s *InfrabinServer) Headers(ctx context.Context, req *connect.Request[infrabinv1.HeadersRequest]) (*connect.Response[infrabinv1.HeadersResponse], error) {
@@ -77,6 +80,17 @@ func (s *InfrabinServer) Delay(ctx context.Context, req *connect.Request[infrabi
 }
 
 func (s *InfrabinServer) Proxy(ctx context.Context, req *connect.Request[infrabinv1.ProxyRequest]) (*connect.Response[infrabinv1.ProxyResponse], error) {
+	// Compile the regexp
+	re, err := regexp.Compile(s.ProxyAllowedURLRegex)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Check if the target URL is allowed
+	if !re.MatchString(req.Msg.Url) {
+		return nil, connect.NewError(connect.CodePermissionDenied, err)
+	}
+
 	outboundReq, err := http.NewRequestWithContext(ctx, req.Msg.Method, req.Msg.Url, nil)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
