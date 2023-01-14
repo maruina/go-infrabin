@@ -85,7 +85,7 @@ func run(cmd *cobra.Command, args []string) {
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("server listening on addr: %v", addr)
+		log.Printf("server listening on %v", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("error calling ListenAndServe(): %s\n", err)
 		}
@@ -93,7 +93,7 @@ func run(cmd *cobra.Command, args []string) {
 	log.Print("server started")
 
 	<-done
-	log.Print("server stopped")
+	log.Printf("got shutdown signal, waiting for in-flight requests or %s drain timeout", drainTimeout)
 
 	ctx, cancel := context.WithTimeout(context.Background(), drainTimeout)
 	defer func() {
