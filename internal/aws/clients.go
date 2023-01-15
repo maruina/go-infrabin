@@ -8,7 +8,7 @@ import (
 )
 
 func GetSTSClient() (*sts.Client, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return nil, err
 	}

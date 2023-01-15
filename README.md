@@ -1,7 +1,6 @@
 # go-infrabin
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/maruina/go-infrabin)](https://goreportcard.com/report/github.com/maruina/go-infrabin)
-[![Coverage Status](https://coveralls.io/repos/github/maruina/go-infrabin/badge.svg?branch=master)](https://coveralls.io/github/maruina/go-infrabin?branch=master)
 
 [infrabin](https://github.com/maruina/infrabin) written in go.
 
@@ -9,274 +8,50 @@
 
 ## Usage
 
-`go-infrabin` exposes three ports:
+`go-infrabin` exposes expose port `8888` as a HTTP/gRPC port using the [connect](https://connect.build/) protocol.
 
-* `8888` as a http rest port
-* `8887` as http Prometheus port
-* `50051` as a grpc port
+```console
+Usage:
+  go-infrabin [flags]
 
-## Installation
-
-See the [README](./chart/go-infrabin/README.md).
-
-## Command line flags
-
-* `--aws-metadata-endpoint`: AWS Metadata Endpoint (default `http://169.254.169.254/latest/meta-data/`)
-* `--drain-timeout`: Drain timeout (default `15s`)
-* `--enable-proxy-endpoint`: When enabled allows `/proxy` and `/aws` endpoints
-* `--proxy-allow-regexp`: Regular expression to allow URL called by the `/proxy` endpoint (default `".*"`)
-* `--intermittent-errors`: Number of consecutive 503 errors before returning 200 when calling the `/intermittent` endpoint (default `2`)
-* `--grpc-host`: gRPC host (default `0.0.0.0`)
-* `--grpc-port`: gRPC port (default `50051`)
-* `-h`, `--help`: Help for go-infrabin
-* `--http-idle-timeout`: HTTP idle timeout (default `15s`)
-* `--http-read-header-timeout`: HTTP read header timeout (default `15s`)
-* `--http-read-timeout`: HTTP read timeout (default `1m0s`)
-* `--http-write-timeout`: HTTP write timeout (default `2m1s`)
-* `--max-delay duration`: Maximum delay (default `2m0s`)
-* `--prom-host`: Prometheus metrics host (default `0.0.0.0`)
-* `--prom-port`: Prometheus metrics port (default `8887`)
-* `--server-host`: HTTP server host (default `0.0.0.0`)
-* `--server-port`: HTTP server port (default `8888`)
-
-## Environment variables
-
-* `INFRABIN_MAX_DELAY`: to change the maximum value for the `/delay` endpoint. Default to 120.
-* `FAIL_ROOT_HANDLER`: if set, the `/` endpoint will return a 503. This is useful when doing a B/G deployment to test the failure and rollback scenario.
-
-## Service Endpoints
-
-* _grpc_: `infrabin.Infrabin.Root` _rest_: `GET /`
-  * _grpc request_
-
-  ```text
-  message Empty {}
-  ```
-
-  * _returns_: a JSON response
-
-  ```json
-  {
-      "hostname": "<hostname>",
-      "kubernetes": {
-          "pod_name": "<pod_name>",
-          "namespace": "<namespace>",
-          "pod_ip": "<pod_ip>",
-          "node_name": "<node_name>"
-      }
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.Delay` _rest_: `GET /delay/<seconds>`
-  * _grpc request_
-
-  ```text
-  message DelayRequest {
-    int32 duration = 1;
-  }
-  ```
-
-  * _returns_: a JSON response
-
-  ```json
-  {
-      "delay": "<seconds>"
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.Headers` _rest_: `GET /headers`
-
-  * _grpc request_
-
-  ```text
-  message HeadersRequest {
-      map<string, string> headers = 1;
-  }
-  ```
-
-  * _returns_: a JSON response with [HTTP headers](https://pkg.go.dev/net/http?tab=doc#Header)
-
-  ```json
-  {
-      "headers": "<request headers>"
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.Env` _rest_: `GET /env/<env_var>`
-  * _grpc request_
-
-  ```text
-  message EnvRequest {
-      string env_var = 1;
-  }
-  ```
-
-  * _returns_: a JSON response with the requested `<env_var>` or `404` if the environment variable does not exist
-
-  ```json
-  {
-      "env": {
-          "<env_var>": "<env_var_value>"
-      }
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.Proxy` _rest_: `GET /proxy`
-  * _NOTE_: `--enable-proxy-endpoint` must be set
-  * _NOTE_: the target endpoint **MUST** provide a JSON response
-  * _grpc request_
-
-  ```text
-  message ProxyRequest {
-      string method = 1;
-      string url = 2;
-      google.protobuf.Struct body = 3;
-      map<string, string> headers = 4;
-  }
-  ```
-
-  * _returns_: JSON of proxied request
-
-* _grpc_: `infrabin.Infrabin.AWSMetadata` _rest_: `GET /aws/metadata/<path>`
-  * _NOTE_: `--enable-proxy-endpoint` must be set
-  * _grpc request_
-
-  ```text
-  message AWSRequest {
-      string path = 1;
-  }
-  ```
-
-  * _returns_: JSON of AWS GET call
-
-* _grpc_: `infrabin.Infrabin.Any` _rest_: `GET /any/<path>`
-
-  ```text
-  message Any {
-      string path = 1;
-  }
-  ```
-
-  * _returns_: JSON of the requested path
-
-* _grpc_: `infrabin.Infrabin.AWSAssume` _rest_: `GET /aws/assume/<role>`
-  * _grpc request_
-
-  ```text
-  message AWSAssume {
-      string role = 1;
-  }
-  ```
-
-  * _returns_: JSON with the AssumedRoleId from AWS
-
-  ```json
-  {
-    "assumedRoleId":"AROAITQZVNCXXXXXXXXXX:aws-assume-session-go-infrabin"
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.AWSGetCallerIdentity` _rest_: `GET /aws/get-caller-identity`
-  * _grpc request_
-
-  ```text
-  message Empty {}
-  ```
-
-  * _returns_: JSON with the GetCallerIdentity output from AWS
-
-  ```json
-  {
-    "getCallerIdentity": {
-      "account": "123456789",
-      "arn": "arn:aws:sts::1234546789:assumed-role/foo/bar",
-      "user_id": "AROAITQZVNCVSVXXXXXX:foo"
-    }
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.Intermittent` _rest_: `GET /intermittent`
-  * _grpc request_
-
-  ```text
-  message Empty {}
-  ```
-
-  * _returns_: JSON with the remaining errors and then the configured `--intermittent-errors` flag
-
-  ```json
-  {"code":14, "message":"2 errors left"}
-  ```
-
-  ```json
-  {"intermittent":{"consecutive_errors":2}
-  ```
-
-## Errors
-
-When calling the http endpoint, errors are mapped by `grpc-gateway`. They have the following format:
-
-* _returns_:
-
-```json
-{
-    "code": 3,
-    "message": "type mismatch, parameter: duration, error: strconv.ParseInt: parsing \"21asd\": invalid syntax"
-}
+Flags:
+      --addr string                      TCP address for the server to listen on (default ":8888")
+      --drain-timeout duration           Drain timeout to wait for in-flight connections to terminate before closing the connection (default 1m0s)
+  -h, --help                             help for go-infrabin
+      --idle-timeout duration            HTTP idle timeout (default 15s)
+      --proxy-allowed-url-regex string   Regexp to allow URLs via the proxy endopoint (default ".*")
+      --proxy-http-timeout duration      HTTP timeout for outbound calls via the proxy endopoint (default 5s)
+      --read-header-timeout duration     HTTP read header timeout (default 15s)
+      --read-timeout duration            HTTP read timeout (default 1m0s)
+      --write-timeout duration           HTTP write timeout (default 15s)
 ```
 
-### Contributing
+## Examples
 
-To build locally, ensure you have compiled the protocol schemas. You
-will need the `protoc` binary which can install by following
-[these instructions][protoc] or if using Homebrew
+```console
+❯ curl -XPOST --header "Content-Type: application/json" --data '{}' http://localhost:8888/infrabin.v1.InfrabinService/Root
+{"hostname":"XYZ"}%
 
-```shell
-brew install protobuf
+❯ curl -XPOST --header "Content-Type: application/json" --data '{"method": "GET", "url":"https://google.com"}' http://localhost:8888/infrabin.v1.InfrabinService/Proxy
+{"statusCode":200,"headers":{"Alt-Svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000,h3-Q050=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\"","Cache-Control":"private, max-age=0","Content-Type":"text/html; charset=ISO-8859-1","Cross-Origin-Opener-Policy-Report-Only":"same-origin-allow-popups; report-to=\"gws\"","Date":"Sun, 18 Dec 2022 14:16:56 GMT","Expires":"-1","P3p":"CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"","Report-To":"{\"group\":\"gws\",\"max_age\":2592000,\"endpoints\":[{\"url\":\"https://csp.withgoogle.com/csp/report-to/gws/other\"}]}","Server":"gws","Set-Cookie":"CONSENT=PENDING+491; expires=Tue, 17-Dec-2024 14:16:56 GMT; path=/; domain=.google.com; Secure","X-Frame-Options":"SAMEORIGIN","X-Xss-Protection":"0"}}%
 ```
 
-You will also need to protoc go plugins for protofuf, grpc, and
-grpc-gateway. `go mod tidy` will fetch the versions specified in
-`go.mod`, and `go install` will install that version.
+## Contributing
 
-```shell
-go get -t -v -d ./...
-go install \
-  github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
-  github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
-  google.golang.org/protobuf/cmd/protoc-gen-go \
-  google.golang.org/grpc/cmd/protoc-gen-go-grpc
+Requirements:
+
+* go v1.19+
+* [buf](https://docs.buf.build/installation)
+
+```console
+❯ make help
+all                            Build, test, and lint (default)
+build                          Build all packages
+clean                          Delete intermediate build artifacts
+generate                       Regenerate code
+help                           Describe useful make targets
+lint                           Lint Go and protobuf
+lintfix                        Automatically fix some lint errors
+test                           Run unit tests
+upgrade                        Upgrade dependencies
 ```
-
-`make run` will compile the protocol buffers, or you can run:
-
-```shell
-make protoc
-```
-
-To run the tests:
-
-```shell
-make test
-```
-
-To run the server locally:
-
-```shell
-make run
-```
-
-To test http:
-
-```shell
-http localhost:8888/
-```
-
-To test grpc, use your favourite grpc tool like [evans][evans]:
-
-```shell
-echo '{}' | evans -r cli call infrabin.Infrabin.Root
-```
-
-[protoc]: https://grpc.io/docs/languages/go/quickstart/#prerequisites
-[evans]: https://github.com/ktr0731/evans/
