@@ -2,6 +2,7 @@ package infrabin
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -38,6 +39,8 @@ func ReadConfiguration() {
 	// Config file should be config.yaml
 	viper.SetConfigName(DefaultConfigName)
 	viper.SetConfigType(DefaultConfigType)
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
 
 	// Default locations should be in the current directory or in a sub-directory called config.
 	// Future iterations should take a config file from an environmental variable via spf13/cobra
@@ -87,7 +90,6 @@ func ReadConfiguration() {
 		} else {
 			// Config file was found but another error was produced, so we will exit.
 			panic(fmt.Errorf("fatal error config file: %s", err))
-
 		}
 	}
 }

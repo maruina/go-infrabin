@@ -2,11 +2,14 @@ package helpers
 
 import "os"
 
-// GetEnv retrieves an environment variable with a default value
+// GetEnv retrieves list of possible environment variables with a default value
 // if the environment variable is missing
-func GetEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
+func GetEnv(keys_and_fallback ...string) string {
+	last := len(keys_and_fallback) - 1
+	for _, key := range keys_and_fallback[:last] {
+		if value, ok := os.LookupEnv(key); ok {
+			return value
+		}
 	}
-	return fallback
+	return keys_and_fallback[last]
 }

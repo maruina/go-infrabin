@@ -43,11 +43,14 @@ func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error)
 
 		var resp Response
 		resp.Hostname = hostname
+		// Take kubernetes info from a couple of _common_ environment variables
 		resp.Kubernetes = &KubeResponse{
-			PodName:   helpers.GetEnv("POD_NAME", ""),
-			Namespace: helpers.GetEnv("POD_NAMESPACE", ""),
-			PodIp:     helpers.GetEnv("POD_IP", ""),
-			NodeName:  helpers.GetEnv("NODE_NAME", ""),
+			PodName:     helpers.GetEnv("POD_NAME", "K8S_POD_NAME", ""),
+			Namespace:   helpers.GetEnv("POD_NAMESPACE", "K8S_NAMESPACE", ""),
+			PodIp:       helpers.GetEnv("POD_IP", "K8S_POD_IP", ""),
+			NodeName:    helpers.GetEnv("NODE_NAME", "K8S_NODE_NAME", ""),
+			ClusterName: helpers.GetEnv("CLUSTER_NAME", "K8S_CLUSTER_NAME", ""),
+			Region:      helpers.GetEnv("REGION", "AWS_REGION", "FUNCTION_REGION", ""),
 		}
 		return &resp, nil
 	}
