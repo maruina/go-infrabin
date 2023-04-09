@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -39,7 +40,7 @@ func TestShutdown(t *testing.T) {
 		context.Background(),
 		"bufnet",
 		grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) { return lis.Dial() }),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
 		t.Fatal(err) // could not set up test listener
