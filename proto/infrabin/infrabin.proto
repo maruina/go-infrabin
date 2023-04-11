@@ -93,6 +93,8 @@ message KubeResponse {
     string  namespace = 2;
     string  pod_ip = 3;
     string  node_name = 4;
+    string  cluster_name = 5;
+    string  region = 6;
 }
 
 message GetCallerIdentityResponse {
