@@ -46,7 +46,7 @@ jobs:
         ignore: pkg/infrabin/infrabin.pb.go,pkg/infrabin/infrabin.pb.gw.go,pkg/infrabin/infrabin_grpc.pb.go
 
     - name: Build docker image on PR
-      uses: docker/build-push-action@v3.0.0
+      uses: docker/build-push-action@v3.3.1
       with:
         tags: maruina/go-infrabin:latest
         push: false
@@ -68,7 +68,7 @@ jobs:
       if: github.event_name	== 'push'
 
     - name: Build and push latest docker image on master
-      uses: docker/build-push-action@v3.0.0
+      uses: docker/build-push-action@v3.3.1
       with:
         push: true
         tags: |
