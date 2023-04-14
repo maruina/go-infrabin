@@ -415,7 +415,7 @@ func TestAWSGetCallerIdentityHandler(t *testing.T) {
 	}
 
 	var rrJSON map[string]interface{}
-	if err := json.Unmarshal([]byte(rr.Body.String()), &rrJSON); err != nil {
+	if err := json.Unmarshal(rr.Body.Bytes(), &rrJSON); err != nil {
 		t.Fatalf("failed to parse responseRecorder body %v: %v", rr.Body.String(), err)
 	}
 
@@ -444,7 +444,7 @@ func TestIntermittentHandler(t *testing.T) {
 	}
 
 	var rrJSON map[string]interface{}
-	if err := json.Unmarshal([]byte(rr.Body.String()), &rrJSON); err != nil {
+	if err := json.Unmarshal(rr.Body.Bytes(), &rrJSON); err != nil {
 		t.Fatalf("failed to parse responseRecorder body %v: %v", rr.Body.String(), err)
 	}
 
@@ -464,7 +464,7 @@ func TestIntermittentHandler(t *testing.T) {
 		t.Fatalf("failed to parse responseString %v: %v", responseString, err)
 	}
 
-	if err := json.Unmarshal([]byte(rr.Body.String()), &rrJSON); err != nil {
+	if err := json.Unmarshal(rr.Body.Bytes(), &rrJSON); err != nil {
 		t.Fatalf("failed to parse responseRecorder body %v: %v", rr.Body.String(), err)
 	}
 
@@ -484,7 +484,7 @@ func TestIntermittentHandler(t *testing.T) {
 		t.Fatalf("failed to parse responseString %v: %v", responseString, err)
 	}
 
-	if err := json.Unmarshal([]byte(rr.Body.String()), &rrJSON); err != nil {
+	if err := json.Unmarshal(rr.Body.Bytes(), &rrJSON); err != nil {
 		t.Fatalf("failed to parse responseRecorder body %v: %v", rr.Body.String(), err)
 	}
 

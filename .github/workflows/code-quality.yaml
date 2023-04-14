@@ -1,7 +1,6 @@
 name: CodeQL
 
 on:
-  push:
   pull_request:
 
 jobs:
@@ -23,7 +22,9 @@ jobs:
           languages: go
 
       - name: Install Protoc
-        uses: arduino/setup-protoc@master
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get protoc go binaries
         run: make tools
