@@ -3,7 +3,7 @@ module github.com/maruina/go-infrabin
 go 1.18
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.17.8
+	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.21
 	github.com/aws/aws-sdk-go-v2/service/sts v1.18.9
 	github.com/google/go-cmp v0.5.9
