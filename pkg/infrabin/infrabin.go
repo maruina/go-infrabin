@@ -21,6 +21,7 @@ import (
 
 	"github.com/maruina/go-infrabin/internal/aws"
 	"github.com/maruina/go-infrabin/internal/helpers"
+	"github.com/mazen160/go-random"
 	"github.com/spf13/viper"
 )
 
@@ -200,6 +201,18 @@ func (s *InfrabinService) Intermittent(ctx context.Context, _ *Empty) (*Response
 	return &Response{
 		Intermittent: &IntermittentResponse{
 			IntermittentErrors: maxErrs,
+		},
+	}, nil
+}
+
+func (s *InfrabinService) RandomData(ctx context.Context, request *RandomDataRequest) (*Response, error) {
+	response, err := random.Bytes(int(request.GetPath()))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Error generating data, %v", err)
+	}
+	return &Response{
+		RandomData: &RandomDataResponse{
+			Data: response,
 		},
 	}, nil
 }

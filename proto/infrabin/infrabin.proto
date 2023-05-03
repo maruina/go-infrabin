@@ -68,6 +68,12 @@ service Infrabin {
         };
     }
 
+    rpc RandomData(RandomDataRequest) returns (Response) {
+        option (google.api.http) = {
+            get: "/bytes/{path=**}"
+        };
+    }
+
 }
 
 
@@ -86,6 +92,7 @@ message Response {
     string assumedRoleId = 9;
     GetCallerIdentityResponse getCallerIdentity = 10;
     IntermittentResponse intermittent = 11;
+    RandomDataResponse randomData = 12;
 }
 
 message KubeResponse {
@@ -136,4 +143,12 @@ message AWSAssumeRequest {
 
 message IntermittentResponse {
     int32 intermittent_errors = 1;
+}
+
+message RandomDataRequest {
+    int32 path = 1;
+}
+
+message RandomDataResponse {
+     bytes data = 1;
 }
