@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@v3.6.0
 
       - name: Run helm-docs
         uses: docker://jnorwood/helm-docs:v1.11.0
