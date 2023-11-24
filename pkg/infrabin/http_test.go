@@ -53,7 +53,7 @@ func TestRootHandler(t *testing.T) {
 		Namespace: helpers.GetEnv("POD_NAMESPACE", ""),
 		PodIp:     helpers.GetEnv("POD_ID", ""),
 		NodeName:  helpers.GetEnv("NODE_NAME", ""),
-		Region:    helpers.GetEnv("REGION", "eu-west-1"),
+		Region:    helpers.GetEnv("REGION", ""),
 	}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	expectedBytes, _ := marshalOptions.Marshal(&expected)

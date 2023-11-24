@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -127,7 +127,7 @@ func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*st
 	}
 
 	// Read request body and close it
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Error reading upstream response body: %v", err)
 	}
