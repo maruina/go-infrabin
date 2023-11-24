@@ -1,4 +1,4 @@
-FROM golang:1.20-buster as builder
+FROM golang:1.21-buster as builder
 ENV GRPC_HEALTH_PROBE_VERSION="v0.3.1"
 ENV PROTOBUF_VERSION="3.20.1"
 
