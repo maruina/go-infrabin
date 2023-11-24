@@ -53,6 +53,7 @@ func TestRootHandler(t *testing.T) {
 		Namespace: helpers.GetEnv("POD_NAMESPACE", ""),
 		PodIp:     helpers.GetEnv("POD_ID", ""),
 		NodeName:  helpers.GetEnv("NODE_NAME", ""),
+		Region:    helpers.GetEnv("REGION", "eu-west-1"),
 	}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	expectedBytes, _ := marshalOptions.Marshal(&expected)
@@ -86,10 +87,12 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	namespace := "kube-system"
 	podIP := "172.16.45.234"
 	nodeName := "ip-10-51-103-11.eu-west-1.compute.internal"
+	region := "eu-west-1"
 	os.Setenv("POD_NAME", podName)
 	os.Setenv("POD_NAMESPACE", namespace)
 	os.Setenv("POD_IP", podIP)
 	os.Setenv("NODE_NAME", nodeName)
+	os.Setenv("REGION", region)
 
 	req := httptest.NewRequest("GET", "/", nil)
 
@@ -112,6 +115,7 @@ func TestRootHandlerKubernetes(t *testing.T) {
 		Namespace: namespace,
 		PodIp:     podIP,
 		NodeName:  nodeName,
+		Region:    region,
 	}
 	marshalOptions := protojson.MarshalOptions{UseProtoNames: true}
 	expectedBytes, _ := marshalOptions.Marshal(&expected)
