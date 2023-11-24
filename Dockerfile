@@ -1,9 +1,9 @@
-FROM golang:1.21-buster as builder
-ENV GRPC_HEALTH_PROBE_VERSION="v0.3.1"
-ENV PROTOBUF_VERSION="3.20.1"
+FROM golang:1.21-bullseye as builder
+ENV GRPC_HEALTH_PROBE_VERSION="v0.4.22"
+ENV PROTOBUF_VERSION="25.1"
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends unzip=6.0-23+deb10u2 && \
+    apt-get install -y --no-install-recommends unzip && \
     mkdir protoc && \
     curl -Lso protoc/protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip" && \
     unzip protoc/protoc.zip -d protoc/ && \
