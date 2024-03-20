@@ -46,10 +46,11 @@ jobs:
         ignore: pkg/infrabin/infrabin.pb.go,pkg/infrabin/infrabin.pb.gw.go,pkg/infrabin/infrabin_grpc.pb.go
 
     - name: Build docker image on PR
-      uses: docker/build-push-action@v5.1.0
+      uses: docker/build-push-action@v5.3.0
       with:
-        tags: maruina/go-infrabin:latest
         push: false
+        platforms: linux/amd64,linux/arm64
+        tags: maruina/go-infrabin:latest
       if: github.event_name == 'pull_request'
 
     - name: Login to DockerHub
@@ -68,9 +69,10 @@ jobs:
       if: github.event_name	== 'push'
 
     - name: Build and push latest docker image on master
-      uses: docker/build-push-action@v5.1.0
+      uses: docker/build-push-action@v5.3.0
       with:
         push: true
+        platforms: linux/amd64,linux/arm64
         tags: |
           docker.io/maruina/go-infrabin:latest
           ghcr.io/maruina/go-infrabin:latest
