@@ -36,8 +36,8 @@ func TestShutdown(t *testing.T) {
 	go server.ListenAndServe(lis)
 
 	// Create connection, dialier, and client
-	conn, err := grpc.DialContext(
-		context.Background(),
+
+	conn, err := grpc.NewClient(
 		"bufnet",
 		grpc.WithContextDialer(func(ctx context.Context, address string) (net.Conn, error) { return lis.Dial() }),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
