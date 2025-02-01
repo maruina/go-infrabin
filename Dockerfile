@@ -1,6 +1,6 @@
-FROM golang:1.21-bullseye as builder
+FROM golang:1.23-bullseye as builder
 ENV GRPC_HEALTH_PROBE_VERSION="v0.4.22"
-ENV PROTOBUF_VERSION="25.1"
+ENV PROTOBUF_VERSION="29.3"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends unzip && \
@@ -19,7 +19,7 @@ RUN make tools && \
     make test && \
     make build
 
-FROM gcr.io/distroless/base-debian11@sha256:6c1e34e2f084fe6df17b8bceb1416f1e11af0fcdb1cef11ee4ac8ae127cb507c
+FROM gcr.io/distroless/base-debian12@sha256:74ddbf52d93fafbdd21b399271b0b4aac1babf8fa98cab59e5692e01169a1348
 COPY --from=builder /go/src/go-infrabin/go-infrabin /usr/local/bin/go-infrabin
 COPY --from=builder /envoy-preflight /envoy-preflight
 COPY --from=builder /grpc_health_probe /usr/local/bin/grpc_health_probe

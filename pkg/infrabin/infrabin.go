@@ -3,7 +3,6 @@ package infrabin
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -194,7 +193,7 @@ func (s *InfrabinService) Intermittent(ctx context.Context, _ *Empty) (*Response
 
 	if s.IntermittentErrorsCounter < maxErrs {
 		s.IntermittentErrorsCounter++
-		return nil, status.Errorf(codes.Unavailable, fmt.Sprintf("%d errors left", maxErrs-s.IntermittentErrorsCounter+1))
+		return nil, status.Errorf(codes.Unavailable, "%d errors left", maxErrs-s.IntermittentErrorsCounter+1)
 	}
 
 	s.IntermittentErrorsCounter = 0
