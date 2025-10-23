@@ -1,4 +1,6 @@
 BINARY_NAME=go-infrabin
+GO_TEST_FLAGS ?= -v -covermode=atomic -coverprofile=coverage.out
+GO_TEST_RACE_FLAG ?= -race
 
 all: dep test
 
@@ -17,7 +19,7 @@ vet:
 lint: fmt vet
 
 test: protoc lint
-	go test -v -covermode=atomic -coverprofile=coverage.out -race ./...
+	go test $(GO_TEST_FLAGS) $(GO_TEST_RACE_FLAG) ./...
 
 protoc:
 	protoc \
