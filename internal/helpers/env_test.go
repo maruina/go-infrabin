@@ -1,14 +1,12 @@
 package helpers
 
 import (
-	"os"
 	"testing"
 )
 
 func TestGetEnv(t *testing.T) {
 	expected := "120"
-	os.Setenv("MAX_DELAY", expected)
-	defer os.Unsetenv("MAX_DELAY")
+	t.Setenv("MAX_DELAY", expected)
 	value := GetEnv("MAX_DELAY", "12")
 	if value != expected {
 		t.Errorf("GetEnv returned unexpected value: got %v want %v", value, expected)
@@ -26,8 +24,7 @@ func TestGetEnvDefault(t *testing.T) {
 
 func TestGetEnvMany(t *testing.T) {
 	expected := "35"
-	os.Setenv("SECOND", expected)
-	defer os.Unsetenv("SECOND")
+	t.Setenv("SECOND", expected)
 	value := GetEnv("MISSING", "SECOND", "")
 	if value != expected {
 		t.Errorf("GetEnv returned unexpected value: got %v want %v", value, expected)

@@ -1,4 +1,4 @@
-FROM golang:1.23-bullseye as builder
+FROM golang:1.24-bookworm as builder
 ENV GRPC_HEALTH_PROBE_VERSION="v0.4.22"
 ENV PROTOBUF_VERSION="29.3"
 
@@ -16,7 +16,7 @@ RUN apt-get update && \
 WORKDIR /go/src/go-infrabin
 COPY . /go/src/go-infrabin
 RUN make tools && \
-    make test && \
+    GO_TEST_RACE_FLAG= make test && \
     make build
 
 FROM gcr.io/distroless/base-debian12@sha256:74ddbf52d93fafbdd21b399271b0b4aac1babf8fa98cab59e5692e01169a1348

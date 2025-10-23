@@ -64,9 +64,7 @@ func TestRootHandler(t *testing.T) {
 }
 
 func TestFailRootHandler(t *testing.T) {
-	if err := os.Setenv("FAIL_ROOT_HANDLER", "true"); err != nil {
-		t.Errorf("cannot set environment variable")
-	}
+	t.Setenv("FAIL_ROOT_HANDLER", "true")
 	req := httptest.NewRequest("GET", "/", nil)
 
 	rr := httptest.NewRecorder()
@@ -75,9 +73,6 @@ func TestFailRootHandler(t *testing.T) {
 
 	if status := rr.Code; status != http.StatusServiceUnavailable {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusServiceUnavailable)
-	}
-	if err := os.Unsetenv("FAIL_ROOT_HANDLER"); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -88,11 +83,11 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	podIP := "172.16.45.234"
 	nodeName := "ip-10-51-103-11.eu-west-1.compute.internal"
 	region := "eu-west-1"
-	os.Setenv("POD_NAME", podName)
-	os.Setenv("POD_NAMESPACE", namespace)
-	os.Setenv("POD_IP", podIP)
-	os.Setenv("NODE_NAME", nodeName)
-	os.Setenv("REGION", region)
+	t.Setenv("POD_NAME", podName)
+	t.Setenv("POD_NAMESPACE", namespace)
+	t.Setenv("POD_IP", podIP)
+	t.Setenv("NODE_NAME", nodeName)
+	t.Setenv("REGION", region)
 
 	req := httptest.NewRequest("GET", "/", nil)
 
@@ -196,9 +191,7 @@ func TestHeadersHandler(t *testing.T) {
 }
 
 func TestEnvHandler(t *testing.T) {
-	if err := os.Setenv("TEST_ENV", "foo"); err != nil {
-		t.Errorf("cannot set environment variable")
-	}
+	t.Setenv("TEST_ENV", "foo")
 	req := httptest.NewRequest("GET", "/env/TEST_ENV", nil)
 
 	rr := httptest.NewRecorder()
