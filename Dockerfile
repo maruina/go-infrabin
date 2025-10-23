@@ -1,4 +1,4 @@
-FROM golang:1.24-bookworm as builder
+FROM golang:1.25-bookworm as builder
 ENV GRPC_HEALTH_PROBE_VERSION="v0.4.22"
 ENV PROTOBUF_VERSION="29.3"
 
