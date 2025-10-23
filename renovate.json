@@ -9,5 +9,30 @@
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
+    },
+    {
+      "description": "Group all Go module dependency updates",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Go module dependencies"
+    },
+    {
+      "description": "Separate PR for Go version updates",
+      "matchManagers": ["gomod", "dockerfile", "github-actions"],
+      "matchPackageNames": ["go", "golang", "actions/setup-go"],
+      "matchUpdateTypes": ["major", "minor"],
+      "groupName": "Go version"
+    },
+    {
+      "description": "Group GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "description": "Auto-update Docker digests",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["digest"],
+      "automerge": true
     }
+  ]
 }
