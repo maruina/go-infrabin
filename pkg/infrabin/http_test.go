@@ -83,11 +83,21 @@ func TestRootHandlerKubernetes(t *testing.T) {
 	podIP := "172.16.45.234"
 	nodeName := "ip-10-51-103-11.eu-west-1.compute.internal"
 	region := "eu-west-1"
-	t.Setenv("POD_NAME", podName)
-	t.Setenv("POD_NAMESPACE", namespace)
-	t.Setenv("POD_IP", podIP)
-	t.Setenv("NODE_NAME", nodeName)
-	t.Setenv("REGION", region)
+	if err := t.Setenv("POD_NAME", podName); err != nil {
+		t.Fatalf("failed to set environment variable: %v", err)
+	}
+	if err := t.Setenv("POD_NAMESPACE", namespace); err != nil {
+		t.Fatalf("failed to set environment variable: %v", err)
+	}
+	if err := t.Setenv("POD_IP", podIP); err != nil {
+		t.Fatalf("failed to set environment variable: %v", err)
+	}
+	if err := t.Setenv("NODE_NAME", nodeName); err != nil {
+		t.Fatalf("failed to set environment variable: %v", err)
+	}
+	if err := t.Setenv("REGION", region); err != nil {
+		t.Fatalf("failed to set environment variable: %v", err)
+	}
 
 	req := httptest.NewRequest("GET", "/", nil)
 
