@@ -1,4 +1,0 @@
-version: 2
-run:
-  skip-dirs:
-    - tools
