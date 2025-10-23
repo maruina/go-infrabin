@@ -19,6 +19,8 @@ go-infrabin
 
 .idea/
 .vscode/
+.claude/settings.local.json
+.tmp/
 
 # Ignore compiled protobuf
 pkg/infrabin/infrabin.pb.go
