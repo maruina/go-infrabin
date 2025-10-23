@@ -1,6 +1,6 @@
 module github.com/maruina/go-infrabin
 
-go 1.23.5
+go 1.24.7
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.1
