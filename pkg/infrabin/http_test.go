@@ -496,8 +496,7 @@ func TestHTTPMetricsCollection(t *testing.T) {
 	handler := newHTTPInfrabinHandler()
 
 	// Set up test environment variable
-	os.Setenv("TEST_ENV", "test_value")
-	defer os.Unsetenv("TEST_ENV")
+	t.Setenv("TEST_ENV", "test_value")
 
 	// Test cases that exercise different endpoints and status codes
 	testCases := []struct {
