@@ -27,11 +27,15 @@ func RegisterInfrabin(pattern string, infrabinService InfrabinServer) HTTPServer
 		if err := RegisterInfrabinHandlerServer(ctx, mux, infrabinService); err != nil {
 			log.Fatalf("gRPC server failed to register: %v", err)
 		}
+
+		// Wrap with metrics middleware
+		instrumentedHandler := HTTPMetricsMiddleware(mux)
+
 		var handler http.Handler
 		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
-			handler = http.StripPrefix(p, mux)
+			handler = http.StripPrefix(p, instrumentedHandler)
 		} else {
-			handler = mux
+			handler = instrumentedHandler
 		}
 		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
 	}
