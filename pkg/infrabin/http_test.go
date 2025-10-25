@@ -23,13 +23,17 @@ import (
 )
 
 func newHTTPInfrabinHandler() http.Handler {
-	return NewHTTPServer(
+	srv, err := NewHTTPServer(
 		"test",
 		RegisterInfrabin("/", &InfrabinService{
-			STSClient:                 aws.FakeSTSClient{},
-			IntermittentErrorsCounter: 0,
+			STSClient: aws.FakeSTSClient{},
+			// intermittentErrorsCounter uses atomic.Int32 zero value
 		}),
-	).Server.Handler
+	)
+	if err != nil {
+		panic(err) // Panic in test helper is acceptable
+	}
+	return srv.Server.Handler
 }
 
 func TestRootHandler(t *testing.T) {
@@ -322,10 +326,14 @@ func TestPromHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "/metrics", nil)
 
 	rr := httptest.NewRecorder()
-	handler := NewHTTPServer(
+	srv, err := NewHTTPServer(
 		"test-prom",
 		RegisterHandler("/", promhttp.Handler()),
-	).Server.Handler
+	)
+	if err != nil {
+		t.Fatalf("Failed to create HTTP server: %v", err)
+	}
+	handler := srv.Server.Handler
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {

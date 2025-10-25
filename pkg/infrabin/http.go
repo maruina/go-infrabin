@@ -2,6 +2,7 @@ package infrabin
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -18,14 +19,14 @@ type HTTPServer struct {
 	Server *http.Server
 }
 
-type HTTPServerOption func(ctx context.Context, s *HTTPServer)
+type HTTPServerOption func(ctx context.Context, s *HTTPServer) error
 
 func RegisterInfrabin(pattern string, infrabinService InfrabinServer) HTTPServerOption {
-	return func(ctx context.Context, s *HTTPServer) {
+	return func(ctx context.Context, s *HTTPServer) error {
 		// Register the handler to call local instance, i.e. no network calls
 		mux := newGatewayMux()
 		if err := RegisterInfrabinHandlerServer(ctx, mux, infrabinService); err != nil {
-			log.Fatalf("gRPC server failed to register: %v", err)
+			return fmt.Errorf("failed to register infrabin handler: %w", err)
 		}
 
 		// Wrap with metrics middleware
@@ -37,16 +38,28 @@ func RegisterInfrabin(pattern string, infrabinService InfrabinServer) HTTPServer
 		} else {
 			handler = instrumentedHandler
 		}
-		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
+
+		mux1, ok := s.Server.Handler.(*http.ServeMux)
+		if !ok {
+			return fmt.Errorf("handler is not *http.ServeMux")
+		}
+		mux1.Handle(pattern, handler)
+		return nil
 	}
 }
 
 func RegisterHandler(pattern string, handler http.Handler) HTTPServerOption {
-	return func(ctx context.Context, s *HTTPServer) {
+	return func(ctx context.Context, s *HTTPServer) error {
 		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
 			handler = http.StripPrefix(p, handler)
 		}
-		s.Server.Handler.(*http.ServeMux).Handle(pattern, handler)
+
+		mux, ok := s.Server.Handler.(*http.ServeMux)
+		if !ok {
+			return fmt.Errorf("handler is not *http.ServeMux")
+		}
+		mux.Handle(pattern, handler)
+		return nil
 	}
 }
 
@@ -60,7 +73,7 @@ func (s *HTTPServer) ListenAndServe() {
 
 	log.Printf("Starting %s server on %s", s.Name, s.Server.Addr)
 	if err := s.Server.ListenAndServe(); err != http.ErrServerClosed {
-		log.Fatal("HTTP server crashed", err)
+		log.Printf("ERROR: HTTP %s server crashed: %v", s.Name, err)
 	}
 }
 
@@ -71,15 +84,16 @@ func (s *HTTPServer) Shutdown() {
 	defer cancel()
 
 	if err := s.Server.Shutdown(ctx); err != nil {
-		log.Fatalf("HTTP %s server graceful shutdown failed: %v", s.Name, err)
-	} else {
-		log.Printf("HTTP %s server stopped", s.Name)
+		log.Printf("ERROR: HTTP %s server graceful shutdown failed: %v", s.Name, err)
+		return
 	}
+	log.Printf("HTTP %s server stopped", s.Name)
 }
 
-func NewHTTPServer(name string, opts ...HTTPServerOption) *HTTPServer {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func NewHTTPServer(name string, opts ...HTTPServerOption) (*HTTPServer, error) {
+	// Use Background context for handler registration
+	// This context is only used during initialization, not for runtime cancellation
+	ctx := context.Background()
 
 	addr := viper.GetString(name+".host") + ":" + viper.GetString(name+".port")
 
@@ -96,9 +110,11 @@ func NewHTTPServer(name string, opts ...HTTPServerOption) *HTTPServer {
 
 	s := &HTTPServer{Name: name, Server: server}
 	for _, opt := range opts {
-		opt(ctx, s)
+		if err := opt(ctx, s); err != nil {
+			return nil, fmt.Errorf("failed to apply HTTP server option: %w", err)
+		}
 	}
-	return s
+	return s, nil
 }
 
 func newGatewayMux() *runtime.ServeMux {
@@ -118,9 +134,8 @@ func newGatewayMux() *runtime.ServeMux {
 func passThroughHeaderMatcher(key string) (string, bool) {
 	if grpcKey, ok := runtime.DefaultHeaderMatcher(key); ok {
 		return grpcKey, ok
-	} else {
-		return runtime.MetadataPrefix + key, true
 	}
+	return runtime.MetadataPrefix + key, true
 }
 
 // Workaround for not being able to specify root as a path

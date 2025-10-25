@@ -1,3 +1,5 @@
+// Package cmd provides the command-line interface and initialization logic
+// for the go-infrabin HTTP and gRPC servers.
 package cmd
 
 import (
@@ -19,7 +21,7 @@ var (
 		Use:  infrabin.AppName,
 		Long: fmt.Sprintf("%s is an HTTP and GRPC server that can be used to simulate blue/green deployments, to test routing and failover or as a general swiss-knife for your infrastructure.", infrabin.AppName),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			for vFlag, cFlag := range map[string]string{
+			for viperKey, cobraFlag := range map[string]string{
 				"grpc.host":             "grpc-host",
 				"grpc.port":             "grpc-port",
 				"server.host":           "server-host",
@@ -37,7 +39,7 @@ var (
 				"httpReadHeaderTimeout": "http-read-header-timeout",
 				"intermittentErrors":    "intermittent-errors",
 			} {
-				if err := viper.BindPFlag(vFlag, cmd.Flags().Lookup(cFlag)); err != nil {
+				if err := viper.BindPFlag(viperKey, cmd.Flags().Lookup(cobraFlag)); err != nil {
 					return err
 				}
 			}
@@ -54,7 +56,12 @@ func Execute() error {
 
 func init() {
 	// Parse the configuration or set default configuration
-	cobra.OnInitialize(infrabin.ReadConfiguration)
+	cobra.OnInitialize(func() {
+		if err := infrabin.ReadConfiguration(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading configuration: %v\n", err)
+			os.Exit(1)
+		}
+	})
 
 	rootCmd.Flags().IP("grpc-host", net.ParseIP(infrabin.DefaultHost), "gRPC host")
 	rootCmd.Flags().Uint("grpc-port", infrabin.DefaultGRPCPort, "gRPC port")
@@ -63,14 +70,14 @@ func init() {
 	rootCmd.Flags().IP("prom-host", net.ParseIP(infrabin.DefaultHost), "Prometheus metrics host")
 	rootCmd.Flags().Uint("prom-port", infrabin.DefaultPrometheusPort, "Prometheus metrics port")
 	rootCmd.Flags().Bool("enable-proxy-endpoint", infrabin.EnableProxyEndpoint, "When enabled allows /proxy and /aws endpoints")
-	rootCmd.Flags().String("proxy-allow-regexp", infrabin.ProxyAllowRegexp, "Regexp to allow URLs via /proxy endopoint")
+	rootCmd.Flags().String("proxy-allow-regexp", infrabin.ProxyAllowRegexp, "Regexp to allow URLs via /proxy endpoint")
 	rootCmd.Flags().String("aws-metadata-endpoint", infrabin.AWSMetadataEndpoint, "AWS Metadata Endpoint")
 	rootCmd.Flags().Duration("drain-timeout", infrabin.DrainTimeout, "Drain timeout")
 	rootCmd.Flags().Duration("max-delay", infrabin.MaxDelay, "Maximum delay")
-	rootCmd.Flags().Duration("http-write-timeout", infrabin.HttpWriteTimeout, "HTTP write timeout")
-	rootCmd.Flags().Duration("http-read-timeout", infrabin.HttpReadTimeout, "HTTP read timeout")
-	rootCmd.Flags().Duration("http-idle-timeout", infrabin.HttpIdleTimeout, "HTTP idle timeout")
-	rootCmd.Flags().Duration("http-read-header-timeout", infrabin.HttpReadHeaderTimeout, "HTTP read header timeout")
+	rootCmd.Flags().Duration("http-write-timeout", infrabin.HTTPWriteTimeout, "HTTP write timeout")
+	rootCmd.Flags().Duration("http-read-timeout", infrabin.HTTPReadTimeout, "HTTP read timeout")
+	rootCmd.Flags().Duration("http-idle-timeout", infrabin.HTTPIdleTimeout, "HTTP idle timeout")
+	rootCmd.Flags().Duration("http-read-header-timeout", infrabin.HTTPReadHeaderTimeout, "HTTP read header timeout")
 	rootCmd.Flags().Int32("intermittent-errors", infrabin.IntermittentErrors, "Consecutive 503 errors before returning 200 for the /intermittent endpoint")
 }
 
@@ -83,21 +90,33 @@ func run(cmd *cobra.Command, args []string) {
 	signal.Notify(finish, syscall.SIGINT, syscall.SIGTERM)
 
 	// run grpc server in background
-	grpcServer := infrabin.NewGRPCServer()
+	grpcServer, err := infrabin.NewGRPCServer()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize gRPC server: %v\n", err)
+		os.Exit(1)
+	}
 	go grpcServer.ListenAndServe(nil)
 
 	// run service server in background
-	server := infrabin.NewHTTPServer(
+	server, err := infrabin.NewHTTPServer(
 		"server",
 		infrabin.RegisterInfrabin("/", grpcServer.InfrabinService),
 	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize HTTP server: %v\n", err)
+		os.Exit(1)
+	}
 	go server.ListenAndServe()
 
 	// run Prometheus server
-	promServer := infrabin.NewHTTPServer(
+	promServer, err := infrabin.NewHTTPServer(
 		"prom",
 		infrabin.RegisterHandler("/", promhttp.Handler()),
 	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize Prometheus server: %v\n", err)
+		os.Exit(1)
+	}
 	go promServer.ListenAndServe()
 
 	// wait for SIGINT

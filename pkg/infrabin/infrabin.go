@@ -1,20 +1,22 @@
+// Package infrabin provides HTTP and gRPC server implementations for simulating
+// infrastructure endpoints in testing environments. It supports endpoints for
+// testing delays, headers, environment variables, AWS metadata, and more.
 package infrabin
 
 import (
 	"bytes"
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
-	"google.golang.org/grpc/metadata"
-
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -24,36 +26,37 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Must embed UnimplementedInfrabinServer for `protogen-gen-go-grpc`
+// InfrabinService implements the Infrabin gRPC service.
+// It must embed UnimplementedInfrabinServer for protogen-gen-go-grpc compatibility.
 type InfrabinService struct {
 	UnimplementedInfrabinServer
-	STSClient                 aws.STSApi
-	IntermittentErrorsCounter int32
+	STSClient                 aws.STSClient
+	intermittentErrorsCounter atomic.Int32
 }
 
 func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error) {
 	fail := helpers.GetEnv("FAIL_ROOT_HANDLER", "")
 	if fail != "" {
-		return nil, status.Error(codes.Unavailable, "some description")
-	} else {
-		hostname, err := os.Hostname()
-		if err != nil {
-			log.Fatalf("cannot get hostname: %v", err)
-		}
-
-		var resp Response
-		resp.Hostname = hostname
-		// Take kubernetes info from a couple of _common_ environment variables
-		resp.Kubernetes = &KubeResponse{
-			PodName:     helpers.GetEnv("POD_NAME", "K8S_POD_NAME", ""),
-			Namespace:   helpers.GetEnv("POD_NAMESPACE", "K8S_NAMESPACE", ""),
-			PodIp:       helpers.GetEnv("POD_IP", "K8S_POD_IP", ""),
-			NodeName:    helpers.GetEnv("NODE_NAME", "K8S_NODE_NAME", ""),
-			ClusterName: helpers.GetEnv("CLUSTER_NAME", "K8S_CLUSTER_NAME", ""),
-			Region:      helpers.GetEnv("REGION", "AWS_REGION", "FUNCTION_REGION", ""),
-		}
-		return &resp, nil
+		return nil, status.Errorf(codes.Unavailable, "root handler is configured to fail via FAIL_ROOT_HANDLER=%s", fail)
 	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "cannot get hostname: %v", err)
+	}
+
+	var resp Response
+	resp.Hostname = hostname
+	// Take kubernetes info from a couple of _common_ environment variables
+	resp.Kubernetes = &KubeResponse{
+		PodName:     helpers.GetEnv("POD_NAME", "K8S_POD_NAME", ""),
+		Namespace:   helpers.GetEnv("POD_NAMESPACE", "K8S_NAMESPACE", ""),
+		PodIp:       helpers.GetEnv("POD_IP", "K8S_POD_IP", ""),
+		NodeName:    helpers.GetEnv("NODE_NAME", "K8S_NODE_NAME", ""),
+		ClusterName: helpers.GetEnv("CLUSTER_NAME", "K8S_CLUSTER_NAME", ""),
+		Region:      helpers.GetEnv("REGION", "AWS_REGION", "FUNCTION_REGION", ""),
+	}
+	return &resp, nil
 }
 
 func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Response, error) {
@@ -69,17 +72,19 @@ func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Re
 func (s *InfrabinService) Env(ctx context.Context, request *EnvRequest) (*Response, error) {
 	value := helpers.GetEnv(request.EnvVar, "")
 	if value == "" {
-		return nil, status.Errorf(codes.NotFound, "No env var named %s", request.EnvVar)
-	} else {
-		return &Response{Env: map[string]string{request.EnvVar: value}}, nil
+		return nil, status.Errorf(codes.NotFound, "no env var named %s", request.EnvVar)
 	}
+	return &Response{Env: map[string]string{request.EnvVar: value}}, nil
 }
 
 func (s *InfrabinService) Headers(ctx context.Context, request *HeadersRequest) (*Response, error) {
 	if request.Headers == nil {
 		request.Headers = make(map[string]string)
 	}
-	md, _ := metadata.FromIncomingContext(ctx)
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
 	for key := range md {
 		request.Headers[key] = strings.Join(md.Get(key), ",")
 	}
@@ -191,12 +196,12 @@ func (s *InfrabinService) AWSGetCallerIdentity(ctx context.Context, _ *Empty) (*
 func (s *InfrabinService) Intermittent(ctx context.Context, _ *Empty) (*Response, error) {
 	maxErrs := viper.GetInt32("intermittentErrors")
 
-	if s.IntermittentErrorsCounter < maxErrs {
-		s.IntermittentErrorsCounter++
-		return nil, status.Errorf(codes.Unavailable, "%d errors left", maxErrs-s.IntermittentErrorsCounter+1)
+	counter := s.intermittentErrorsCounter.Add(1)
+	if counter <= maxErrs {
+		return nil, status.Errorf(codes.Unavailable, "%d errors left", maxErrs-counter+1)
 	}
 
-	s.IntermittentErrorsCounter = 0
+	s.intermittentErrorsCounter.Store(0)
 	return &Response{
 		Intermittent: &IntermittentResponse{
 			IntermittentErrors: maxErrs,

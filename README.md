@@ -12,7 +12,7 @@
 `go-infrabin` exposes three ports:
 
 * `8888` as a http rest port
-* `8887` as http Prometheus port
+* `8887` as http Prometheus metrics port (endpoint: `/metrics`)
 * `50051` as a grpc port
 
 ## Installation
@@ -41,8 +41,18 @@ See the [README](./chart/go-infrabin/README.md).
 
 ## Environment variables
 
-* `INFRABIN_MAX_DELAY`: to change the maximum value for the `/delay` endpoint. Default to 120.
 * `FAIL_ROOT_HANDLER`: if set, the `/` endpoint will return a 503. This is useful when doing a B/G deployment to test the failure and rollback scenario.
+
+### Kubernetes Environment Variables
+
+The following environment variables are used to populate the Kubernetes information in the root endpoint response:
+
+* `POD_NAME` or `K8S_POD_NAME`: Kubernetes pod name
+* `POD_NAMESPACE` or `K8S_NAMESPACE`: Kubernetes namespace
+* `POD_IP` or `K8S_POD_IP`: Pod IP address
+* `NODE_NAME` or `K8S_NODE_NAME`: Kubernetes node name
+* `CLUSTER_NAME` or `K8S_CLUSTER_NAME`: Kubernetes cluster name
+* `REGION`, `AWS_REGION`, or `FUNCTION_REGION`: Cloud region
 
 ## Service Endpoints
 
@@ -62,7 +72,9 @@ See the [README](./chart/go-infrabin/README.md).
           "pod_name": "<pod_name>",
           "namespace": "<namespace>",
           "pod_ip": "<pod_ip>",
-          "node_name": "<node_name>"
+          "node_name": "<node_name>",
+          "cluster_name": "<cluster_name>",
+          "region": "<region>"
       }
   }
   ```
@@ -121,7 +133,7 @@ See the [README](./chart/go-infrabin/README.md).
   }
   ```
 
-* _grpc_: `infrabin.Infrabin.Proxy` _rest_: `GET /proxy`
+* _grpc_: `infrabin.Infrabin.Proxy` _rest_: `POST /proxy`
   * _NOTE_: `--enable-proxy-endpoint` must be set
   * _NOTE_: the target endpoint **MUST** provide a JSON response
   * _grpc request_
@@ -204,12 +216,33 @@ See the [README](./chart/go-infrabin/README.md).
 
   * _returns_: JSON with the remaining errors and then the configured `--intermittent-errors` flag
 
+  First N requests return errors:
   ```json
   {"code":14, "message":"2 errors left"}
   ```
 
+  After N errors, returns success:
   ```json
-  {"intermittent":{"consecutive_errors":2}
+  {"intermittent":{"intermittent_errors":2}}
+  ```
+
+* _grpc_: `infrabin.Infrabin.RandomData` _rest_: `GET /bytes/<number>`
+  * _grpc request_
+
+  ```text
+  message RandomDataRequest {
+      int32 path = 1;
+  }
+  ```
+
+  * _returns_: JSON with random bytes of the specified length
+
+  ```json
+  {
+    "randomData": {
+      "data": "<base64_encoded_random_bytes>"
+    }
+  }
   ```
 
 ## Errors
