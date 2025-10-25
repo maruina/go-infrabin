@@ -490,3 +490,94 @@ func TestIntermittentHandler(t *testing.T) {
 	}
 
 }
+
+func TestHTTPMetricsCollection(t *testing.T) {
+	// Create HTTP server with metrics middleware
+	handler := newHTTPInfrabinHandler()
+
+	// Set up test environment variable
+	t.Setenv("TEST_ENV", "test_value")
+
+	// Test cases that exercise different endpoints and status codes
+	testCases := []struct {
+		name           string
+		path           string
+		expectedStatus int
+		expectedRoute  string
+	}{
+		{
+			name:           "headers endpoint",
+			path:           "/headers",
+			expectedStatus: http.StatusOK,
+			expectedRoute:  "/headers",
+		},
+		{
+			name:           "delay endpoint with parameter",
+			path:           "/delay/2",
+			expectedStatus: http.StatusOK,
+			expectedRoute:  "/delay/{duration}",
+		},
+		{
+			name:           "env endpoint",
+			path:           "/env/TEST_ENV",
+			expectedStatus: http.StatusOK,
+			expectedRoute:  "/env/{env_var}",
+		},
+		{
+			name:           "root endpoint",
+			path:           "/",
+			expectedStatus: http.StatusOK,
+			expectedRoute:  "/",
+		},
+	}
+
+	// Execute test requests
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", tc.path, nil)
+			rr := httptest.NewRecorder()
+
+			handler.ServeHTTP(rr, req)
+
+			if rr.Code != tc.expectedStatus {
+				t.Errorf("%s: got status %d, want %d", tc.name, rr.Code, tc.expectedStatus)
+			}
+		})
+	}
+
+	// Verify metrics are collected by checking the prometheus registry
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	rr := httptest.NewRecorder()
+
+	// Use the prometheus handler to get metrics
+	promHandler := promhttp.Handler()
+	promHandler.ServeHTTP(rr, req)
+
+	body := rr.Body.String()
+
+	// Check for HTTP metrics presence
+	expectedMetrics := []string{
+		"infrabin_http_request_duration_seconds",
+		"infrabin_http_requests_total",
+	}
+
+	for _, metric := range expectedMetrics {
+		if !bytes.Contains([]byte(body), []byte(metric)) {
+			t.Errorf("Expected metric %s not found in output", metric)
+		}
+	}
+
+	// Verify that we have metrics with handler names (matching gRPC metric style)
+	expectedLabels := []string{
+		`handler="headers"`,
+		`handler="delay"`,
+		`handler="env"`,
+		`handler="root"`,
+	}
+
+	for _, label := range expectedLabels {
+		if !bytes.Contains([]byte(body), []byte(label)) {
+			t.Errorf("Expected label %s not found in metrics output", label)
+		}
+	}
+}
