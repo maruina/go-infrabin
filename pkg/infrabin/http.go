@@ -2,6 +2,7 @@ package infrabin
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +13,9 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
+
+//go:embed openapi.swagger.json
+var openAPISpec []byte
 
 type HTTPServer struct {
 	Name   string
@@ -48,6 +52,23 @@ func RegisterHandler(pattern string, handler http.Handler) HTTPServerOption {
 			return fmt.Errorf("handler is not *http.ServeMux")
 		}
 		serveMux.Handle(pattern, handler)
+		return nil
+	}
+}
+
+// RegisterOpenAPI registers an OpenAPI specification handler at /openapi.json.
+// This serves the embedded OpenAPI spec generated from the protobuf definitions.
+func RegisterOpenAPI(pattern string) HTTPServerOption {
+	return func(ctx context.Context, s *HTTPServer) error {
+		serveMux, ok := s.Server.Handler.(*http.ServeMux)
+		if !ok {
+			return fmt.Errorf("handler is not *http.ServeMux")
+		}
+		serveMux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(openAPISpec)
+		})
 		return nil
 	}
 }

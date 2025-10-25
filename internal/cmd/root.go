@@ -101,6 +101,7 @@ func run(cmd *cobra.Command, args []string) {
 	server, err := infrabin.NewHTTPServer(
 		"server",
 		infrabin.RegisterInfrabin("/", grpcServer.InfrabinService),
+		infrabin.RegisterOpenAPI("/openapi.json"),
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize HTTP server: %v\n", err)
