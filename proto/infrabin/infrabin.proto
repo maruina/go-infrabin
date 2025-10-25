@@ -8,66 +8,98 @@ import "google/api/annotations.proto";
 option go_package = "github.com/maruina/go-infrabin/pkg/infrabin";
 
 
-// The echo infrabin service replies with the message it received.
+// Infrabin is a testing and debugging service that exposes various endpoints
+// for infrastructure validation, network testing, and cloud provider integration.
+//
+// WARNING: This service exposes sensitive endpoints and should NEVER be used on the public Internet.
 service Infrabin {
 
-    rpc Delay(DelayRequest) returns (Response) {
-        option (google.api.http) = {
-            get: "/delay/{duration}"
-        };
-    }
-    rpc Env(EnvRequest) returns (Response) {
-        option (google.api.http) = {
-            get: "/env/{env_var}"
-        };
-    }
-    rpc Headers(HeadersRequest) returns (Response) {
-        option (google.api.http) = {
-            get: "/headers"
-        };
-    }
-    rpc Proxy(ProxyRequest) returns (google.protobuf.Struct) {
-        option (google.api.http) = {
-            post: "/proxy"
-            body: "*"
-        };
-    }
-    rpc AWSMetadata(AWSMetadataRequest) returns (google.protobuf.Struct) {
-        option (google.api.http) = {
-            get: "/aws/metadata/{path=**}"
-        };
-    }
-
+    // Root returns basic service information including hostname and Kubernetes metadata.
+    // This endpoint can be configured to fail using the FAIL_ROOT_HANDLER environment variable.
     rpc Root(Empty) returns (Response) {
         option (google.api.http) = {
             get: "//"
         };
     }
 
-    rpc Any(AnyRequest) returns (Response) {
+    // Delay introduces an artificial delay before responding.
+    // The delay duration is specified in seconds and is capped by the --max-delay flag (default: 2m).
+    rpc Delay(DelayRequest) returns (Response) {
         option (google.api.http) = {
-            get: "/any/{path=**}"
+            get: "/delay/{duration}"
         };
     }
 
+    // Headers returns all HTTP request headers received by the service.
+    // Useful for debugging proxy configurations and header propagation.
+    rpc Headers(HeadersRequest) returns (Response) {
+        option (google.api.http) = {
+            get: "/headers"
+        };
+    }
+
+    // Env retrieves the value of a specific environment variable.
+    // Returns 404 if the environment variable does not exist.
+    rpc Env(EnvRequest) returns (Response) {
+        option (google.api.http) = {
+            get: "/env/{env_var}"
+        };
+    }
+
+    // Proxy forwards HTTP requests to arbitrary URLs and returns the JSON response.
+    // Requires --enable-proxy-endpoint flag. Target URL must be allowed by --proxy-allow-regexp.
+    // The target endpoint MUST return a JSON response.
+    rpc Proxy(ProxyRequest) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            post: "/proxy"
+            body: "*"
+        };
+    }
+
+    // AWSMetadata queries the AWS EC2 metadata service and returns the result.
+    // Requires --enable-proxy-endpoint flag.
+    // The metadata endpoint can be customized using --aws-metadata-endpoint flag.
+    rpc AWSMetadata(AWSMetadataRequest) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            get: "/aws/metadata/{path=**}"
+        };
+    }
+
+    // AWSAssume attempts to assume an AWS IAM role and returns the assumed role ID.
+    // Useful for testing IAM role trust relationships and IRSA configurations.
     rpc AWSAssume(AWSAssumeRequest) returns (Response) {
         option (google.api.http) = {
             get: "/aws/assume/{role=**}"
         };
     }
 
+    // AWSGetCallerIdentity calls AWS STS GetCallerIdentity and returns the current identity.
+    // Returns the AWS account ID, ARN, and user ID of the caller.
     rpc AWSGetCallerIdentity(Empty) returns (Response) {
         option (google.api.http) = {
             get: "/aws/get-caller-identity"
         };
     }
 
+    // Any is a wildcard endpoint that echoes back the requested path.
+    // Useful for testing routing and path handling.
+    rpc Any(AnyRequest) returns (Response) {
+        option (google.api.http) = {
+            get: "/any/{path=**}"
+        };
+    }
+
+    // Intermittent simulates flaky service behavior by returning errors for the first N requests.
+    // The number of errors is configured by --intermittent-errors flag (default: 2).
+    // After N consecutive errors, returns 200 OK.
     rpc Intermittent(Empty) returns (Response) {
         option (google.api.http) = {
             get: "/intermittent"
         };
     }
 
+    // RandomData generates random bytes of the specified length.
+    // Returns base64-encoded random data in the response.
     rpc RandomData(RandomDataRequest) returns (Response) {
         option (google.api.http) = {
             get: "/bytes/{path=**}"
@@ -77,78 +109,128 @@ service Infrabin {
 }
 
 
-// Empty is the null value for parameters.
+// Empty represents a request with no parameters.
 message Empty {}
 
+// Response is the unified response message used by most endpoints.
+// Different endpoints populate different fields based on their functionality.
 message Response {
+	// hostname is the hostname of the server responding to the request.
 	string              hostname     = 1;
+	// kubernetes contains Kubernetes-specific metadata when running in a K8s environment.
 	KubeResponse        kubernetes   = 2;
+	// liveness is used for health check endpoints.
 	string              liveness     = 3;
+	// delay contains the duration in seconds for delay responses.
 	int32               delay        = 4;
+	// error contains error messages when operations fail.
 	string              error        = 5;
+	// headers contains HTTP request headers from the /headers endpoint.
 	map<string, string> headers      = 6;
+	// env contains environment variable key-value pairs from the /env endpoint.
 	map<string, string> env          = 7;
-    string path = 8;
-    string assumedRoleId = 9;
-    GetCallerIdentityResponse getCallerIdentity = 10;
-    IntermittentResponse intermittent = 11;
-    RandomDataResponse randomData = 12;
+	// path echoes back the requested path from the /any endpoint.
+	string path = 8;
+	// assumedRoleId contains the AWS assumed role ID from the /aws/assume endpoint.
+	string assumedRoleId = 9;
+	// getCallerIdentity contains AWS STS GetCallerIdentity response data.
+	GetCallerIdentityResponse getCallerIdentity = 10;
+	// intermittent contains intermittent error simulation configuration.
+	IntermittentResponse intermittent = 11;
+	// randomData contains generated random bytes.
+	RandomDataResponse randomData = 12;
 }
 
+// KubeResponse contains Kubernetes metadata extracted from environment variables.
+// These fields are populated when the service runs in a Kubernetes pod.
 message KubeResponse {
-    string  pod_name = 1;
-    string  namespace = 2;
-    string  pod_ip = 3;
-    string  node_name = 4;
-    string  cluster_name = 5;
-    string  region = 6;
+	// pod_name is the name of the Kubernetes pod (from POD_NAME or K8S_POD_NAME).
+	string  pod_name = 1;
+	// namespace is the Kubernetes namespace (from POD_NAMESPACE or K8S_NAMESPACE).
+	string  namespace = 2;
+	// pod_ip is the pod's IP address (from POD_IP or K8S_POD_IP).
+	string  pod_ip = 3;
+	// node_name is the Kubernetes node name (from NODE_NAME or K8S_NODE_NAME).
+	string  node_name = 4;
+	// cluster_name is the Kubernetes cluster name (from CLUSTER_NAME or K8S_CLUSTER_NAME).
+	string  cluster_name = 5;
+	// region is the cloud region (from REGION, AWS_REGION, or FUNCTION_REGION).
+	string  region = 6;
 }
 
+// GetCallerIdentityResponse contains the response from AWS STS GetCallerIdentity API.
 message GetCallerIdentityResponse {
-    string account = 1;
-    string arn = 2;
-    string user_id = 3;
+	// account is the AWS account ID.
+	string account = 1;
+	// arn is the Amazon Resource Name of the calling identity.
+	string arn = 2;
+	// user_id is the unique identifier of the calling entity.
+	string user_id = 3;
 }
 
+// DelayRequest specifies how long to delay before responding.
 message DelayRequest {
-    int32 duration = 1;
+	// duration is the delay in seconds. Maximum value is constrained by --max-delay flag.
+	int32 duration = 1;
 }
 
+// EnvRequest specifies which environment variable to retrieve.
 message EnvRequest {
-    string env_var = 1;
+	// env_var is the name of the environment variable to query.
+	string env_var = 1;
 }
 
+// HeadersRequest allows passing custom headers for the /headers endpoint.
 message HeadersRequest {
-    map<string, string> headers = 1;
+	// headers contains custom HTTP headers to include in the request.
+	map<string, string> headers = 1;
 }
 
+// ProxyRequest defines parameters for proxying HTTP requests to external URLs.
 message ProxyRequest {
-    string method = 1;
-    string url = 2;
-    google.protobuf.Struct body = 3;
-    map<string, string> headers = 4;
+	// method is the HTTP method to use (GET, POST, PUT, DELETE, etc).
+	string method = 1;
+	// url is the target URL to proxy the request to. Must match --proxy-allow-regexp.
+	string url = 2;
+	// body is the request body to send to the target URL.
+	google.protobuf.Struct body = 3;
+	// headers contains HTTP headers to include in the proxied request.
+	map<string, string> headers = 4;
 }
 
+// AWSMetadataRequest specifies the path to query from AWS EC2 metadata service.
 message AWSMetadataRequest {
-    string path = 1;
+	// path is the metadata path to query (e.g., "instance-id", "ami-id").
+	string path = 1;
 }
 
+// AnyRequest captures the wildcard path from the /any endpoint.
 message AnyRequest {
-    string path = 1;
+	// path is the full path after /any/ in the request URL.
+	string path = 1;
 }
 
+// AWSAssumeRequest specifies the AWS IAM role to assume.
 message AWSAssumeRequest {
-    string role = 1;
+	// role is the ARN or name of the IAM role to assume.
+	string role = 1;
 }
 
+// IntermittentResponse contains configuration for intermittent error simulation.
 message IntermittentResponse {
-    int32 intermittent_errors = 1;
+	// intermittent_errors is the number of consecutive errors before returning success.
+	int32 intermittent_errors = 1;
 }
 
+// RandomDataRequest specifies how many random bytes to generate.
 message RandomDataRequest {
-    int32 path = 1;
+	// path should be an integer representing the number of bytes to generate.
+	// Note: The field name "path" is a legacy naming issue - it represents byte count.
+	int32 path = 1;
 }
 
+// RandomDataResponse contains the generated random data.
 message RandomDataResponse {
-     bytes data = 1;
+	// data contains the random bytes encoded as base64 in JSON responses.
+	bytes data = 1;
 }

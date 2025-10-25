@@ -27,6 +27,7 @@ protoc:
 		--go_out=paths=source_relative:pkg \
 		--go-grpc_out=paths=source_relative:pkg \
 		--grpc-gateway_out=logtostderr=true,paths=source_relative:pkg \
+		--openapiv2_out=logtostderr=true,allow_merge=true,merge_file_name=openapi:pkg/infrabin \
 		proto/infrabin/infrabin.proto
 	protoc \
         --proto_path=proto/ \

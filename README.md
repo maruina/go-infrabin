@@ -54,209 +54,39 @@ The following environment variables are used to populate the Kubernetes informat
 * `CLUSTER_NAME` or `K8S_CLUSTER_NAME`: Kubernetes cluster name
 * `REGION`, `AWS_REGION`, or `FUNCTION_REGION`: Cloud region
 
-## Service Endpoints
+## API Documentation
 
-* _grpc_: `infrabin.Infrabin.Root` _rest_: `GET /`
-  * _grpc request_
+For comprehensive API documentation, the service exposes an OpenAPI (Swagger) specification at:
 
-  ```text
-  message Empty {}
-  ```
+* **OpenAPI Spec**: `GET /openapi.json` (available on port `8888`)
 
-  * _returns_: a JSON response
+This specification is auto-generated from the protobuf definitions and includes:
+- Complete endpoint documentation with descriptions
+- Request/response schemas
+- gRPC and REST API mappings
+- Field descriptions and validation rules
 
-  ```json
-  {
-      "hostname": "<hostname>",
-      "kubernetes": {
-          "pod_name": "<pod_name>",
-          "namespace": "<namespace>",
-          "pod_ip": "<pod_ip>",
-          "node_name": "<node_name>",
-          "cluster_name": "<cluster_name>",
-          "region": "<region>"
-      }
-  }
-  ```
+You can use tools like [Swagger UI](https://swagger.io/tools/swagger-ui/), [Redoc](https://github.com/Redocly/redoc), or [Postman](https://www.postman.com/) to explore the API interactively.
 
-* _grpc_: `infrabin.Infrabin.Delay` _rest_: `GET /delay/<seconds>`
-  * _grpc request_
+### Quick Reference
 
-  ```text
-  message DelayRequest {
-    int32 duration = 1;
-  }
-  ```
+The service exposes both gRPC (`infrabin.Infrabin`) and REST endpoints:
 
-  * _returns_: a JSON response
+| Endpoint | Description |
+|----------|-------------|
+| `GET /` | Service information (hostname, Kubernetes metadata) |
+| `GET /delay/{seconds}` | Artificial delay for testing |
+| `GET /headers` | Echo request headers |
+| `GET /env/{env_var}` | Retrieve environment variable |
+| `POST /proxy` | Proxy HTTP requests (requires `--enable-proxy-endpoint`) |
+| `GET /aws/metadata/{path}` | Query AWS metadata service (requires `--enable-proxy-endpoint`) |
+| `GET /aws/assume/{role}` | Assume AWS IAM role |
+| `GET /aws/get-caller-identity` | AWS STS GetCallerIdentity |
+| `GET /any/{path}` | Wildcard path echo |
+| `GET /intermittent` | Simulate intermittent failures |
+| `GET /bytes/{number}` | Generate random bytes |
 
-  ```json
-  {
-      "delay": "<seconds>"
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.Headers` _rest_: `GET /headers`
-
-  * _grpc request_
-
-  ```text
-  message HeadersRequest {
-      map<string, string> headers = 1;
-  }
-  ```
-
-  * _returns_: a JSON response with [HTTP headers](https://pkg.go.dev/net/http?tab=doc#Header)
-
-  ```json
-  {
-      "headers": "<request headers>"
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.Env` _rest_: `GET /env/<env_var>`
-  * _grpc request_
-
-  ```text
-  message EnvRequest {
-      string env_var = 1;
-  }
-  ```
-
-  * _returns_: a JSON response with the requested `<env_var>` or `404` if the environment variable does not exist
-
-  ```json
-  {
-      "env": {
-          "<env_var>": "<env_var_value>"
-      }
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.Proxy` _rest_: `POST /proxy`
-  * _NOTE_: `--enable-proxy-endpoint` must be set
-  * _NOTE_: the target endpoint **MUST** provide a JSON response
-  * _grpc request_
-
-  ```text
-  message ProxyRequest {
-      string method = 1;
-      string url = 2;
-      google.protobuf.Struct body = 3;
-      map<string, string> headers = 4;
-  }
-  ```
-
-  * _returns_: JSON of proxied request
-
-* _grpc_: `infrabin.Infrabin.AWSMetadata` _rest_: `GET /aws/metadata/<path>`
-  * _NOTE_: `--enable-proxy-endpoint` must be set
-  * _grpc request_
-
-  ```text
-  message AWSRequest {
-      string path = 1;
-  }
-  ```
-
-  * _returns_: JSON of AWS GET call
-
-* _grpc_: `infrabin.Infrabin.Any` _rest_: `GET /any/<path>`
-
-  ```text
-  message Any {
-      string path = 1;
-  }
-  ```
-
-  * _returns_: JSON of the requested path
-
-* _grpc_: `infrabin.Infrabin.AWSAssume` _rest_: `GET /aws/assume/<role>`
-  * _grpc request_
-
-  ```text
-  message AWSAssume {
-      string role = 1;
-  }
-  ```
-
-  * _returns_: JSON with the AssumedRoleId from AWS
-
-  ```json
-  {
-    "assumedRoleId":"AROAITQZVNCXXXXXXXXXX:aws-assume-session-go-infrabin"
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.AWSGetCallerIdentity` _rest_: `GET /aws/get-caller-identity`
-  * _grpc request_
-
-  ```text
-  message Empty {}
-  ```
-
-  * _returns_: JSON with the GetCallerIdentity output from AWS
-
-  ```json
-  {
-    "getCallerIdentity": {
-      "account": "123456789",
-      "arn": "arn:aws:sts::1234546789:assumed-role/foo/bar",
-      "user_id": "AROAITQZVNCVSVXXXXXX:foo"
-    }
-  }
-  ```
-
-* _grpc_: `infrabin.Infrabin.Intermittent` _rest_: `GET /intermittent`
-  * _grpc request_
-
-  ```text
-  message Empty {}
-  ```
-
-  * _returns_: JSON with the remaining errors and then the configured `--intermittent-errors` flag
-
-  First N requests return errors:
-  ```json
-  {"code":14, "message":"2 errors left"}
-  ```
-
-  After N errors, returns success:
-  ```json
-  {"intermittent":{"intermittent_errors":2}}
-  ```
-
-* _grpc_: `infrabin.Infrabin.RandomData` _rest_: `GET /bytes/<number>`
-  * _grpc request_
-
-  ```text
-  message RandomDataRequest {
-      int32 path = 1;
-  }
-  ```
-
-  * _returns_: JSON with random bytes of the specified length
-
-  ```json
-  {
-    "randomData": {
-      "data": "<base64_encoded_random_bytes>"
-    }
-  }
-  ```
-
-## Errors
-
-When calling the http endpoint, errors are mapped by `grpc-gateway`. They have the following format:
-
-* _returns_:
-
-```json
-{
-    "code": 3,
-    "message": "type mismatch, parameter: duration, error: strconv.ParseInt: parsing \"21asd\": invalid syntax"
-}
-```
+For detailed request/response schemas and field descriptions, see `/openapi.json`.
 
 ### Contributing
 
