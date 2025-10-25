@@ -19,10 +19,10 @@ const (
 	DefaultPrometheusPort uint = 8887
 	DrainTimeout               = 15 * time.Second
 	EnableProxyEndpoint        = false
-	HttpIdleTimeout            = 15 * time.Second
-	HttpReadHeaderTimeout      = 15 * time.Second
-	HttpReadTimeout            = 60 * time.Second
-	HttpWriteTimeout           = MaxDelay + time.Second
+	HTTPIdleTimeout            = 15 * time.Second
+	HTTPReadHeaderTimeout      = 15 * time.Second
+	HTTPReadTimeout            = 60 * time.Second
+	HTTPWriteTimeout           = MaxDelay + time.Second
 	MaxDelay                   = 120 * time.Second
 	ProxyAllowRegexp           = ".*"
 	IntermittentErrors         = 2
@@ -32,9 +32,9 @@ var (
 	DefaultConfigPaths = [...]string{".", "./config", "./cmd/go-infrabin"}
 )
 
-// ReadConfiguration : Sets up a default configuration then overwrites any configured details from
+// ReadConfiguration sets up a default configuration then overwrites any configured details from
 // a config.yaml file in the local directory or under ./config
-func ReadConfiguration() {
+func ReadConfiguration() error {
 
 	// Config file should be config.yaml
 	viper.SetConfigName(DefaultConfigName)
@@ -79,17 +79,18 @@ func ReadConfiguration() {
 	viper.SetDefault("intermittentErrors", IntermittentErrors)
 
 	// http timeouts
-	viper.SetDefault("httpWriteTimeout", HttpWriteTimeout)
-	viper.SetDefault("httpReadTimeout", HttpReadTimeout)
-	viper.SetDefault("httpIdleTimeout", HttpIdleTimeout)
-	viper.SetDefault("httpReadHeaderTimeout", HttpReadHeaderTimeout)
+	viper.SetDefault("httpWriteTimeout", HTTPWriteTimeout)
+	viper.SetDefault("httpReadTimeout", HTTPReadTimeout)
+	viper.SetDefault("httpIdleTimeout", HTTPIdleTimeout)
+	viper.SetDefault("httpReadHeaderTimeout", HTTPReadHeaderTimeout)
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Will just use the default configuration.
 		} else {
-			// Config file was found but another error was produced, so we will exit.
-			panic(fmt.Errorf("fatal error config file: %s", err))
+			// Config file was found but another error was produced
+			return fmt.Errorf("fatal error config file: %w", err)
 		}
 	}
+	return nil
 }

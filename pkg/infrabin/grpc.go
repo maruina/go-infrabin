@@ -2,6 +2,7 @@ package infrabin
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 
@@ -30,13 +31,14 @@ func (s *GRPCServer) ListenAndServe(lis net.Listener) {
 	var err error
 	if lis == nil {
 		if lis, err = net.Listen("tcp", addr); err != nil {
-			log.Fatalf("Listen failed on "+addr+": %v", err)
+			log.Printf("ERROR: Listen failed on %s: %v", addr, err)
+			return
 		}
 	}
 
 	log.Printf("Starting %s server on %s", s.Name, lis.Addr())
 	if err = s.Server.Serve(lis); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		log.Printf("ERROR: gRPC %s server failed: %v", s.Name, err)
 	}
 }
 
@@ -65,22 +67,22 @@ func (s *GRPCServer) Shutdown() {
 	}
 }
 
-// New creates a new rpc server.
-func NewGRPCServer() *GRPCServer {
+// NewGRPCServer creates a new gRPC server.
+// Returns an error if server initialization fails.
+func NewGRPCServer() (*GRPCServer, error) {
 	gs := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 	)
 
-	// Create the gPRC services
+	// Create the gRPC services
 	healthServer := health.NewServer()
-	stsClient, err := aws.GetSTSClient()
+	stsClient, err := aws.GetSTSClient(context.Background())
 	if err != nil {
-		log.Fatalf("failed to create the AWS STS client, %v", err)
+		return nil, fmt.Errorf("failed to create AWS STS client: %w", err)
 	}
 	infrabinService := &InfrabinService{
-		STSClient:                 stsClient,
-		IntermittentErrorsCounter: 0,
+		STSClient: stsClient,
 	}
 
 	// Register gRPC services on the grpc server
@@ -97,5 +99,5 @@ func NewGRPCServer() *GRPCServer {
 		Server:          gs,
 		InfrabinService: infrabinService,
 		HealthService:   healthServer,
-	}
+	}, nil
 }

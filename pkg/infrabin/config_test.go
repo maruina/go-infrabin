@@ -8,7 +8,9 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 
-	ReadConfiguration()
+	if err := ReadConfiguration(); err != nil {
+		t.Fatalf("ReadConfiguration() error = %v", err)
+	}
 
 	var tests = []struct {
 		name  string

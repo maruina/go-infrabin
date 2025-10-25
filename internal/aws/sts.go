@@ -10,15 +10,15 @@ import (
 
 // Code modified from https://aws.github.io/aws-sdk-go-v2/docs/code-examples/sts/assumerole/
 
-type STSApi interface {
+// STSClient defines the interface for AWS STS operations.
+type STSClient interface {
 	AssumeRole(ctx context.Context,
 		params *sts.AssumeRoleInput,
 		optFns ...func(*sts.Options)) (*sts.AssumeRoleOutput, error)
 	GetCallerIdentity(ctx context.Context, params *sts.GetCallerIdentityInput, optFns ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error)
 }
 
-func STSAssumeRole(ctx context.Context, client STSApi, role string, session string) (string, error) {
-
+func STSAssumeRole(ctx context.Context, client STSClient, role string, session string) (string, error) {
 	if role == "" {
 		return "", fmt.Errorf("role %v is empty", role)
 	}
@@ -36,17 +36,17 @@ func STSAssumeRole(ctx context.Context, client STSApi, role string, session stri
 
 	result, err := client.AssumeRole(ctx, input)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to assume role %s: %w", role, err)
 	}
 
 	return *result.AssumedRoleUser.AssumedRoleId, nil
 }
 
-func STSGetCallerIdentity(ctx context.Context, client STSApi) (sts.GetCallerIdentityOutput, error) {
+func STSGetCallerIdentity(ctx context.Context, client STSClient) (sts.GetCallerIdentityOutput, error) {
 	input := &sts.GetCallerIdentityInput{}
 	result, err := client.GetCallerIdentity(ctx, input)
 	if err != nil {
-		return sts.GetCallerIdentityOutput{}, err
+		return sts.GetCallerIdentityOutput{}, fmt.Errorf("failed to get caller identity: %w", err)
 	}
 	return *result, nil
 }
