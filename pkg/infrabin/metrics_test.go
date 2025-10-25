@@ -13,62 +13,62 @@ func TestNormalizeRoute(t *testing.T) {
 		{
 			name:          "root path",
 			path:          "/",
-			expectedRoute: "/",
+			expectedRoute: "root",
 		},
 		{
 			name:          "headers endpoint",
 			path:          "/headers",
-			expectedRoute: "/headers",
+			expectedRoute: "headers",
 		},
 		{
 			name:          "delay with parameter",
 			path:          "/delay/5",
-			expectedRoute: "/delay/{duration}",
+			expectedRoute: "delay",
 		},
 		{
 			name:          "env with parameter",
 			path:          "/env/HOME",
-			expectedRoute: "/env/{env_var}",
+			expectedRoute: "env",
 		},
 		{
 			name:          "aws metadata with path",
 			path:          "/aws/metadata/instance-id",
-			expectedRoute: "/aws/metadata/{path}",
+			expectedRoute: "aws-metadata",
 		},
 		{
 			name:          "aws assume with role",
 			path:          "/aws/assume/arn:aws:iam::123456789012:role/MyRole",
-			expectedRoute: "/aws/assume/{role}",
+			expectedRoute: "aws-assume",
 		},
 		{
 			name:          "aws get-caller-identity",
 			path:          "/aws/get-caller-identity",
-			expectedRoute: "/aws/get-caller-identity",
+			expectedRoute: "aws-get-caller-identity",
 		},
 		{
 			name:          "any with path",
 			path:          "/any/foo/bar/baz",
-			expectedRoute: "/any/{path}",
+			expectedRoute: "any",
 		},
 		{
 			name:          "bytes with path",
 			path:          "/bytes/1024",
-			expectedRoute: "/bytes/{path}",
+			expectedRoute: "bytes",
 		},
 		{
 			name:          "proxy endpoint",
 			path:          "/proxy",
-			expectedRoute: "/proxy",
+			expectedRoute: "proxy",
 		},
 		{
 			name:          "intermittent endpoint",
 			path:          "/intermittent",
-			expectedRoute: "/intermittent",
+			expectedRoute: "intermittent",
 		},
 		{
-			name:          "unknown endpoint returns as-is",
+			name:          "unknown endpoint returns first segment",
 			path:          "/unknown/path",
-			expectedRoute: "/unknown/path",
+			expectedRoute: "unknown",
 		},
 	}
 

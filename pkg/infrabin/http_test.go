@@ -567,12 +567,12 @@ func TestHTTPMetricsCollection(t *testing.T) {
 		}
 	}
 
-	// Verify that we have metrics for our normalized routes
+	// Verify that we have metrics with handler names (matching gRPC metric style)
 	expectedLabels := []string{
-		`handler="/headers"`,
-		`handler="/delay/{duration}"`,
-		`handler="/env/{env_var}"`,
-		`handler="/"`,
+		`handler="headers"`,
+		`handler="delay"`,
+		`handler="env"`,
+		`handler="root"`,
 	}
 
 	for _, label := range expectedLabels {

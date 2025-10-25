@@ -57,59 +57,64 @@ func HTTPMetricsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// normalizeRoute converts dynamic path segments to patterns to prevent cardinality explosion
+// normalizeRoute extracts the handler name from the path to prevent cardinality explosion
+//
+// This function returns the endpoint name similar to gRPC method names, ensuring consistent
+// metric labeling across both HTTP and gRPC layers. Dynamic path segments are ignored.
 //
 // MAINTENANCE: When adding new endpoints to proto/infrabin/infrabin.proto, update this function
-// to map dynamic path segments to their pattern equivalents. This ensures metric cardinality
-// remains bounded regardless of parameter values.
+// to map the endpoint path to its handler name.
 //
 // Examples:
-//   - /delay/5 -> /delay/{duration}
-//   - /env/HOME -> /env/{env_var}
-//   - /aws/metadata/instance-id -> /aws/metadata/{path}
+//   - /delay/5 -> delay
+//   - /env/HOME -> env
+//   - /aws/metadata/instance-id -> aws-metadata
+//   - / -> root
 func normalizeRoute(path string) string {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 
 	// Handle root path
 	if len(parts) == 0 || (len(parts) == 1 && parts[0] == "") {
-		return "/"
+		return "root"
 	}
 
-	// Known endpoint patterns - prevents cardinality explosion
-	// by mapping dynamic segments like /delay/5 -> /delay/{duration}
+	// Extract handler name from path
 	if len(parts) >= 1 {
 		endpoint := parts[0]
 		switch endpoint {
 		case "delay":
-			return "/delay/{duration}"
+			return "delay"
 		case "headers":
-			return "/headers"
+			return "headers"
 		case "env":
-			return "/env/{env_var}"
+			return "env"
 		case "proxy":
-			return "/proxy"
+			return "proxy"
 		case "intermittent":
-			return "/intermittent"
+			return "intermittent"
 		case "any":
-			return "/any/{path}"
+			return "any"
 		case "bytes":
-			return "/bytes/{path}"
+			return "bytes"
 		case "aws":
 			// Handle AWS sub-paths
 			if len(parts) >= 2 {
 				switch parts[1] {
 				case "metadata":
-					return "/aws/metadata/{path}"
+					return "aws-metadata"
 				case "assume":
-					return "/aws/assume/{role}"
+					return "aws-assume"
 				case "get-caller-identity":
-					return "/aws/get-caller-identity"
+					return "aws-get-caller-identity"
 				}
 			}
-			return "/aws"
+			return "aws"
 		}
 	}
 
-	// Default: return the path as-is for unknown patterns
-	return path
+	// Default: return the first path segment for unknown patterns
+	if len(parts) > 0 && parts[0] != "" {
+		return parts[0]
+	}
+	return "unknown"
 }
