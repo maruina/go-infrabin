@@ -34,7 +34,7 @@ func RequestLoggingFormatter(writer io.Writer, params handlers.LogFormatterParam
 	}
 
 	// Apache Combined Log Format with sourceIP instead of RemoteAddr
-	fmt.Fprintf(writer, "%s - %s [%s] \"%s %s %s\" %d %d \"%s\" \"%s\"\n",
+	_, _ = fmt.Fprintf(writer, "%s - %s [%s] \"%s %s %s\" %d %d \"%s\" \"%s\"\n",
 		sourceIP,
 		username,
 		params.TimeStamp.Format("02/Jan/2006:15:04:05 -0700"),
