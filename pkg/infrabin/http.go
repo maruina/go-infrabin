@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/gorilla/handlers"
 	"github.com/spf13/viper"
@@ -24,41 +23,31 @@ type HTTPServerOption func(ctx context.Context, s *HTTPServer) error
 func RegisterInfrabin(pattern string, infrabinService InfrabinServer) HTTPServerOption {
 	return func(ctx context.Context, s *HTTPServer) error {
 		// Register the handler to call local instance, i.e. no network calls
-		mux := newGatewayMux()
-		if err := RegisterInfrabinHandlerServer(ctx, mux, infrabinService); err != nil {
+		gatewayMux := newGatewayMux()
+		if err := RegisterInfrabinHandlerServer(ctx, gatewayMux, infrabinService); err != nil {
 			return fmt.Errorf("failed to register infrabin handler: %w", err)
 		}
 
 		// Wrap with metrics middleware
-		instrumentedHandler := HTTPMetricsMiddleware(mux)
+		handler := HTTPMetricsMiddleware(gatewayMux)
 
-		var handler http.Handler
-		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
-			handler = http.StripPrefix(p, instrumentedHandler)
-		} else {
-			handler = instrumentedHandler
-		}
-
-		mux1, ok := s.Server.Handler.(*http.ServeMux)
+		// Register the handler on the HTTP server's ServeMux
+		serveMux, ok := s.Server.Handler.(*http.ServeMux)
 		if !ok {
 			return fmt.Errorf("handler is not *http.ServeMux")
 		}
-		mux1.Handle(pattern, handler)
+		serveMux.Handle(pattern, handler)
 		return nil
 	}
 }
 
 func RegisterHandler(pattern string, handler http.Handler) HTTPServerOption {
 	return func(ctx context.Context, s *HTTPServer) error {
-		if p := strings.TrimSuffix(pattern, "/"); len(p) < len(pattern) {
-			handler = http.StripPrefix(p, handler)
-		}
-
-		mux, ok := s.Server.Handler.(*http.ServeMux)
+		serveMux, ok := s.Server.Handler.(*http.ServeMux)
 		if !ok {
 			return fmt.Errorf("handler is not *http.ServeMux")
 		}
-		mux.Handle(pattern, handler)
+		serveMux.Handle(pattern, handler)
 		return nil
 	}
 }
