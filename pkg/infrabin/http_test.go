@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -524,6 +525,24 @@ func TestEgressDNSHandler(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectSuccess:  false,
 		},
+		{
+			name:           "custom DNS with port",
+			host:           "google.com@8.8.8.8:53",
+			expectedStatus: http.StatusOK,
+			expectSuccess:  true,
+		},
+		{
+			name:           "custom DNS without port (defaults to 53)",
+			host:           "google.com@8.8.8.8",
+			expectedStatus: http.StatusOK,
+			expectSuccess:  true,
+		},
+		{
+			name:           "invalid DNS server",
+			host:           "google.com@invalid-dns",
+			expectedStatus: http.StatusOK,
+			expectSuccess:  false,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -561,8 +580,13 @@ func TestEgressDNSHandler(t *testing.T) {
 			if !ok {
 				t.Fatal("target field not found or not a string")
 			}
-			if target != tc.host {
-				t.Errorf("expected target=%s, got target=%s", tc.host, target)
+			// Target should be the hostname without DNS server part
+			expectedTarget := tc.host
+			if strings.Contains(tc.host, "@") {
+				expectedTarget = strings.Split(tc.host, "@")[0]
+			}
+			if target != expectedTarget {
+				t.Errorf("expected target=%s, got target=%s", expectedTarget, target)
 			}
 
 			if tc.expectSuccess {

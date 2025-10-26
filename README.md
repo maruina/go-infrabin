@@ -97,7 +97,15 @@ The egress endpoints support testing network connectivity and DNS resolution:
 
 **DNS Resolution**:
 ```bash
+# Test DNS resolution using system DNS
 curl http://localhost:8888/egress/dns/google.com
+
+# Test with custom DNS server (format: hostname@dns_server:port)
+curl http://localhost:8888/egress/dns/google.com@8.8.8.8:53
+
+# Test with custom DNS server (port defaults to 53)
+curl http://localhost:8888/egress/dns/google.com@1.1.1.1
+
 # Returns resolved IP addresses and duration
 ```
 

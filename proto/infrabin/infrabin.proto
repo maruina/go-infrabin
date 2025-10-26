@@ -107,6 +107,9 @@ service Infrabin {
     }
 
     // EgressDNS performs DNS resolution for the specified host.
+    // Host format: "hostname[@dns_server:port]" where @dns_server:port is optional. Default port: 53.
+    // If DNS server is specified, it will be used for resolution instead of system DNS.
+    // Example: "example.com@8.8.8.8:53" uses Google DNS for resolution.
     // Tests DNS connectivity and resolution capabilities.
     rpc EgressDNS(EgressDNSRequest) returns (EgressResponse) {
         option (google.api.http) = {
@@ -279,7 +282,8 @@ message RandomDataResponse {
 
 // EgressDNSRequest specifies the host to perform DNS resolution on.
 message EgressDNSRequest {
-	// host is the hostname or IP address to resolve.
+	// host is "hostname[@dns_server:port]" where @dns_server:port is optional. Default port: 53.
+	// Example: "example.com@8.8.8.8:53" uses Google DNS for resolution.
 	string host = 1;
 }
 

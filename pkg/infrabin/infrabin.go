@@ -229,24 +229,58 @@ func (s *InfrabinService) EgressDNS(ctx context.Context, request *EgressDNSReque
 		return nil, status.Errorf(codes.InvalidArgument, "host must not be empty")
 	}
 
+	// Parse host to extract hostname and optional DNS server
+	hostname, dnsServer := parseTargetAndDNS(request.Host)
+
+	// Add default port 53 if DNS server is specified without port
+	if dnsServer != "" && !strings.Contains(dnsServer, ":") {
+		dnsServer = fmt.Sprintf("%s:53", dnsServer)
+	}
+
+	// Validate DNS server address if provided
+	if dnsServer != "" {
+		if _, _, err := net.SplitHostPort(dnsServer); err != nil {
+			return &EgressResponse{
+				Success: false,
+				Error:   fmt.Sprintf("invalid DNS server address %q: %v", dnsServer, err),
+				Target:  hostname,
+			}, nil
+		}
+	}
+
 	start := time.Now()
 	resolver := &net.Resolver{}
-	ips, err := resolver.LookupHost(ctx, request.Host)
+
+	// Use custom resolver if DNS server is specified
+	if dnsServer != "" {
+		timeout := viper.GetDuration("egressTimeout")
+		resolver = &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				d := net.Dialer{
+					Timeout: timeout,
+				}
+				return d.DialContext(ctx, "udp", dnsServer)
+			},
+		}
+	}
+
+	ips, err := resolver.LookupHost(ctx, hostname)
 	duration := time.Since(start)
 
 	if err != nil {
 		return &EgressResponse{
 			Success:    false,
 			Error:      err.Error(),
-			Target:     request.Host,
+			Target:     hostname,
 			DurationMs: duration.Milliseconds(),
 		}, nil
 	}
 
 	return &EgressResponse{
 		Success:     true,
-		Message:     fmt.Sprintf("Successfully resolved %s to %d IP address(es)", request.Host, len(ips)),
-		Target:      request.Host,
+		Message:     fmt.Sprintf("Successfully resolved %s to %d IP address(es)", hostname, len(ips)),
+		Target:      hostname,
 		ResolvedIps: ips,
 		DurationMs:  duration.Milliseconds(),
 	}, nil
