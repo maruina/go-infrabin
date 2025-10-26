@@ -90,6 +90,8 @@ The service exposes both gRPC (`infrabin.Infrabin`) and REST endpoints:
 | `GET /egress/http/{target}` | Test HTTP connectivity (port 80 by default) |
 | `GET /egress/https/{target}` | Test HTTPS connectivity with certificate verification (port 443) |
 | `GET /egress/https/insecure/{target}` | Test HTTPS connectivity without certificate verification |
+| `POST /healthcheck/liveness/{status}` | Set liveness probe status (`pass` or `fail`) |
+| `POST /healthcheck/readiness/{status}` | Set readiness probe status (`pass` or `fail`) |
 
 #### Egress Endpoints
 
@@ -128,6 +130,69 @@ curl http://localhost:8888/egress/https/insecure/self-signed.example.com
 ```
 
 All egress endpoints return timing information even on failure, which is useful for diagnosing network issues. The timeout can be configured with `--egress-timeout` (default: 3s).
+
+#### Health Check Endpoints
+
+The health check endpoints allow you to dynamically control the liveness and readiness probe status, useful for testing Kubernetes probe behavior and failover scenarios:
+
+**gRPC Health Checks**:
+
+The service implements the standard `grpc.health.v1.Health` service with two registered service names:
+- `liveness` - for liveness probe checks
+- `readiness` - for readiness probe checks
+
+```bash
+# Check liveness status via gRPC
+grpcurl -plaintext -d '{"service": "liveness"}' localhost:50051 grpc.health.v1.Health/Check
+
+# Check readiness status via gRPC
+grpcurl -plaintext -d '{"service": "readiness"}' localhost:50051 grpc.health.v1.Health/Check
+```
+
+**HTTP Health Check Control**:
+
+```bash
+# Set liveness to healthy (SERVING)
+curl -X POST http://localhost:8888/healthcheck/liveness/pass
+
+# Set liveness to unhealthy (NOT_SERVING)
+curl -X POST http://localhost:8888/healthcheck/liveness/fail
+
+# Set readiness to ready (SERVING)
+curl -X POST http://localhost:8888/healthcheck/readiness/pass
+
+# Set readiness to not ready (NOT_SERVING)
+curl -X POST http://localhost:8888/healthcheck/readiness/fail
+```
+
+**Kubernetes Integration**:
+
+```yaml
+# Using gRPC probes (Kubernetes 1.24+)
+livenessProbe:
+  grpc:
+    service: liveness
+    port: 50051
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  grpc:
+    service: readiness
+    port: 50051
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# Using HTTP probes (via grpc-gateway)
+livenessProbe:
+  httpGet:
+    path: /check?service=liveness
+    port: 8888
+  initialDelaySeconds: 5
+  periodSeconds: 10
+```
+
+By default, both liveness and readiness are set to healthy (SERVING) on startup. Use the control endpoints to simulate probe failures and test your orchestration behavior.
 
 For detailed request/response schemas and field descriptions, see `/openapi.json`.
 

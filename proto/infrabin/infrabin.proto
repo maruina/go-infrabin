@@ -151,6 +151,24 @@ service Infrabin {
         };
     }
 
+    // SetLivenessStatus controls the liveness probe status.
+    // Use "pass" to mark as healthy, "fail" to mark as unhealthy.
+    // This allows testing of Kubernetes liveness probe behavior.
+    rpc SetLivenessStatus(SetHealthStatusRequest) returns (Response) {
+        option (google.api.http) = {
+            post: "/healthcheck/liveness/{status}"
+        };
+    }
+
+    // SetReadinessStatus controls the readiness probe status.
+    // Use "pass" to mark as ready, "fail" to mark as not ready.
+    // This allows testing of Kubernetes readiness probe behavior.
+    rpc SetReadinessStatus(SetHealthStatusRequest) returns (Response) {
+        option (google.api.http) = {
+            post: "/healthcheck/readiness/{status}"
+        };
+    }
+
 }
 
 
@@ -164,7 +182,7 @@ message Response {
 	string              hostname     = 1;
 	// kubernetes contains Kubernetes-specific metadata when running in a K8s environment.
 	KubeResponse        kubernetes   = 2;
-	// liveness is used for health check endpoints.
+	// liveness is used for liveness health check endpoints.
 	string              liveness     = 3;
 	// delay contains the duration in seconds for delay responses.
 	int32               delay        = 4;
@@ -184,6 +202,8 @@ message Response {
 	IntermittentResponse intermittent = 11;
 	// randomData contains generated random bytes.
 	RandomDataResponse randomData = 12;
+	// readiness is used for readiness health check endpoints.
+	string              readiness    = 13;
 }
 
 // KubeResponse contains Kubernetes metadata extracted from environment variables.
@@ -324,4 +344,12 @@ message EgressResponse {
 	int32 statusCode = 6;
 	// durationMs contains the duration of the operation in milliseconds.
 	int64 durationMs = 7;
+}
+
+// SetHealthStatusRequest specifies the desired health check status.
+message SetHealthStatusRequest {
+	// status should be either "pass" or "fail".
+	// "pass" sets the service as healthy/ready.
+	// "fail" sets the service as unhealthy/not ready.
+	string status = 1;
 }

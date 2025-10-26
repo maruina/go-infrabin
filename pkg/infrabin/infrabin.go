@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -34,7 +35,39 @@ import (
 type InfrabinService struct {
 	UnimplementedInfrabinServer
 	STSClient                 aws.STSClient
+	HealthService             HealthService
 	intermittentErrorsCounter atomic.Int32
+}
+
+// HealthService defines the interface for managing health check status.
+// This interface allows setting the serving status for different service names.
+type HealthService interface {
+	SetServingStatus(service string, status grpc_health_v1.HealthCheckResponse_ServingStatus)
+}
+
+// derefString safely dereferences a string pointer, returning empty string if nil.
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// validateDNSServerAddress validates and normalizes a DNS server address.
+// If the address doesn't include a port, it adds the default port 53.
+// Returns the normalized address or an error if the address format is invalid.
+func validateDNSServerAddress(dnsServer string) (string, error) {
+	if dnsServer == "" {
+		return "", nil
+	}
+
+	// Check if port exists using SplitHostPort (handles IPv6 correctly)
+	_, _, err := net.SplitHostPort(dnsServer)
+	if err != nil {
+		// No port specified, add default using JoinHostPort (handles IPv6)
+		dnsServer = net.JoinHostPort(dnsServer, "53")
+	}
+	return dnsServer, nil
 }
 
 func (s *InfrabinService) Root(ctx context.Context, _ *Empty) (*Response, error) {
@@ -67,9 +100,17 @@ func (s *InfrabinService) Delay(ctx context.Context, request *DelayRequest) (*Re
 	requestDuration := time.Duration(request.Duration) * time.Second
 
 	duration := helpers.MinDuration(requestDuration, maxDelay)
-	time.Sleep(duration)
 
-	return &Response{Delay: int32(duration.Seconds())}, nil
+	// Respect context cancellation during the delay
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return &Response{Delay: int32(duration.Seconds())}, nil
+	case <-ctx.Done():
+		return nil, status.FromContextError(ctx.Err()).Err()
+	}
 }
 
 func (s *InfrabinService) Env(ctx context.Context, request *EnvRequest) (*Response, error) {
@@ -126,8 +167,9 @@ func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*st
 		req.Header.Set(key, value)
 	}
 
-	// Send http request
-	client := http.Client{Timeout: 5 * time.Second}
+	// Send http request with configured timeout
+	timeout := viper.GetDuration("egressTimeout")
+	client := http.Client{Timeout: timeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Unable to reach %s: %v", request.Url, err)
@@ -136,16 +178,16 @@ func (s *InfrabinService) Proxy(ctx context.Context, request *ProxyRequest) (*st
 	// Read request body and close it
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Error reading upstream response body: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to read upstream response body: %v", err)
 	}
 	if err = resp.Body.Close(); err != nil {
-		return nil, status.Errorf(codes.Internal, "Error closing upstream response: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to close upstream response: %v", err)
 	}
 
 	// Convert []bytes into json struct
 	var response structpb.Struct
 	if err := response.UnmarshalJSON(body); err != nil {
-		return nil, status.Errorf(codes.Internal, "Error creating Struct from upstream response json: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to create struct from upstream response json: %v", err)
 	}
 	return &response, nil
 }
@@ -175,7 +217,7 @@ func (s *InfrabinService) AWSAssume(ctx context.Context, request *AWSAssumeReque
 
 	roleId, err := aws.STSAssumeRole(ctx, s.STSClient, request.Role, "aws-assume-session-go-infrabin")
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Error assuming AWS IAM role, %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to assume AWS IAM role: %v", err)
 	}
 
 	return &Response{AssumedRoleId: roleId}, nil
@@ -184,14 +226,15 @@ func (s *InfrabinService) AWSAssume(ctx context.Context, request *AWSAssumeReque
 func (s *InfrabinService) AWSGetCallerIdentity(ctx context.Context, _ *Empty) (*Response, error) {
 	response, err := aws.STSGetCallerIdentity(ctx, s.STSClient)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Error calling AWS Get Caller Identity, %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to get AWS caller identity: %v", err)
 	}
 
+	// Safely dereference pointers with default values to prevent nil pointer panics
 	return &Response{
 		GetCallerIdentity: &GetCallerIdentityResponse{
-			Account: *response.Account,
-			Arn:     *response.Arn,
-			UserId:  *response.UserId,
+			Account: derefString(response.Account),
+			Arn:     derefString(response.Arn),
+			UserId:  derefString(response.UserId),
 		},
 	}, nil
 }
@@ -204,7 +247,10 @@ func (s *InfrabinService) Intermittent(ctx context.Context, _ *Empty) (*Response
 		return nil, status.Errorf(codes.Unavailable, "%d errors left", maxErrs-counter+1)
 	}
 
-	s.intermittentErrorsCounter.Store(0)
+	// Use CompareAndSwap to atomically reset counter only if it's still at the value we read.
+	// This prevents race conditions where multiple goroutines might try to reset simultaneously.
+	// We intentionally ignore the boolean return value - if another goroutine already reset it, that's fine.
+	s.intermittentErrorsCounter.CompareAndSwap(counter, 0)
 	return &Response{
 		Intermittent: &IntermittentResponse{
 			IntermittentErrors: maxErrs,
@@ -215,7 +261,7 @@ func (s *InfrabinService) Intermittent(ctx context.Context, _ *Empty) (*Response
 func (s *InfrabinService) RandomData(ctx context.Context, request *RandomDataRequest) (*Response, error) {
 	response, err := random.Bytes(int(request.GetPath()))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Error generating data, %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to generate random data: %v", err)
 	}
 	return &Response{
 		RandomData: &RandomDataResponse{
@@ -262,20 +308,16 @@ func (s *InfrabinService) EgressDNS(ctx context.Context, request *EgressDNSReque
 }
 
 // createDNSResolver creates a DNS resolver, using a custom DNS server if specified.
-// Returns system resolver when dnsServer is empty.
+// Returns the system default resolver when dnsServer is empty.
+// Returns an error if the dnsServer address is invalid.
 func (s *InfrabinService) createDNSResolver(dnsServer string) (*net.Resolver, error) {
-	if dnsServer == "" {
+	normalizedDNS, err := validateDNSServerAddress(dnsServer)
+	if err != nil {
+		return nil, err
+	}
+
+	if normalizedDNS == "" {
 		return &net.Resolver{}, nil
-	}
-
-	// Add default port 53 if not specified
-	if !strings.Contains(dnsServer, ":") {
-		dnsServer = fmt.Sprintf("%s:53", dnsServer)
-	}
-
-	// Validate DNS server address format
-	if _, _, err := net.SplitHostPort(dnsServer); err != nil {
-		return nil, fmt.Errorf("invalid DNS server address %q: %w", dnsServer, err)
 	}
 
 	timeout := viper.GetDuration("egressTimeout")
@@ -285,7 +327,7 @@ func (s *InfrabinService) createDNSResolver(dnsServer string) (*net.Resolver, er
 			d := net.Dialer{
 				Timeout: timeout,
 			}
-			return d.DialContext(ctx, "udp", dnsServer)
+			return d.DialContext(ctx, "udp", normalizedDNS)
 		},
 	}, nil
 }
@@ -302,15 +344,11 @@ func (s *InfrabinService) EgressHTTPSInsecure(ctx context.Context, request *Egre
 	return s.testHTTPConnection(ctx, request.Target, "https", 443, true)
 }
 
-// parseTargetAndDNS parses target in format "host:port@dns" or "host:port"
-// Returns hostPort, dnsServer, and error
+// parseTargetAndDNS parses target in format "host:port@dns" or "host:port".
+// Returns hostPort and optional dnsServer (empty string if not specified).
 func parseTargetAndDNS(target string) (hostPort, dnsServer string) {
-	// Split by @ to separate host:port from DNS server
-	parts := strings.Split(target, "@")
-	hostPort = parts[0]
-	if len(parts) > 1 {
-		dnsServer = parts[1]
-	}
+	// Cut at @ separator to extract host:port and optional DNS server
+	hostPort, dnsServer, _ = strings.Cut(target, "@")
 	return hostPort, dnsServer
 }
 
@@ -340,22 +378,31 @@ func (s *InfrabinService) testHTTPConnection(ctx context.Context, target, scheme
 		hostPort = fmt.Sprintf("%s:%d", hostPort, defaultPort)
 	}
 
-	// Validate DNS server address if provided
-	if dnsServer != "" {
-		if _, _, err := net.SplitHostPort(dnsServer); err != nil {
-			return &EgressResponse{
-				Success: false,
-				Error:   fmt.Sprintf("invalid DNS server address %q: %v", dnsServer, err),
-				Target:  hostPort,
-			}, nil
-		}
+	// Validate and normalize DNS server address if provided
+	normalizedDNS, err := validateDNSServerAddress(dnsServer)
+	if err != nil {
+		return &EgressResponse{
+			Success: false,
+			Error:   fmt.Sprintf("invalid DNS server address %q: %v", dnsServer, err),
+			Target:  hostPort,
+		}, nil
 	}
+	dnsServer = normalizedDNS
 
 	// Build URL
 	testURL := fmt.Sprintf("%s://%s", scheme, hostPort)
 
 	// Get timeout from configuration
 	timeout := viper.GetDuration("egressTimeout")
+
+	// Check if context is already cancelled before proceeding with expensive operations
+	if err := ctx.Err(); err != nil {
+		return &EgressResponse{
+			Success: false,
+			Error:   fmt.Sprintf("request cancelled: %v", err),
+			Target:  hostPort,
+		}, nil
+	}
 
 	// Create HTTP transport with appropriate TLS configuration
 	// Note: We create a new transport for each request to support custom DNS servers.
@@ -365,6 +412,8 @@ func (s *InfrabinService) testHTTPConnection(ctx context.Context, target, scheme
 			InsecureSkipVerify: insecure,
 		},
 	}
+	// Clean up idle connections to prevent goroutine leaks
+	defer transport.CloseIdleConnections()
 
 	if dnsServer != "" {
 		// Create custom resolver with specified DNS server
@@ -446,4 +495,59 @@ func (s *InfrabinService) testHTTPConnection(ctx context.Context, target, scheme
 		StatusCode: int32(resp.StatusCode),
 		DurationMs: duration.Milliseconds(),
 	}, nil
+}
+
+// SetLivenessStatus controls the liveness probe status for the "liveness" service.
+// It updates the gRPC health check status that can be queried via grpc.health.v1.Health/Check.
+// Accepts "pass" to mark as healthy (SERVING), "fail" to mark as unhealthy (NOT_SERVING).
+func (s *InfrabinService) SetLivenessStatus(ctx context.Context, req *SetHealthStatusRequest) (*Response, error) {
+	if err := validateHealthStatus(req.Status); err != nil {
+		return nil, err
+	}
+
+	servingStatus := parseHealthStatus(req.Status)
+	s.HealthService.SetServingStatus("liveness", servingStatus)
+
+	return &Response{
+		Liveness: fmt.Sprintf("liveness status set to %s", req.Status),
+	}, nil
+}
+
+// SetReadinessStatus controls the readiness probe status for the "readiness" service.
+// It updates the gRPC health check status that can be queried via grpc.health.v1.Health/Check.
+// Accepts "pass" to mark as ready (SERVING), "fail" to mark as not ready (NOT_SERVING).
+func (s *InfrabinService) SetReadinessStatus(ctx context.Context, req *SetHealthStatusRequest) (*Response, error) {
+	if err := validateHealthStatus(req.Status); err != nil {
+		return nil, err
+	}
+
+	servingStatus := parseHealthStatus(req.Status)
+	s.HealthService.SetServingStatus("readiness", servingStatus)
+
+	return &Response{
+		Readiness: fmt.Sprintf("readiness status set to %s", req.Status),
+	}, nil
+}
+
+// validateHealthStatus validates that the status is either "pass" or "fail".
+// Returns a gRPC InvalidArgument error if the status is invalid.
+func validateHealthStatus(statusValue string) error {
+	switch statusValue {
+	case "pass", "fail":
+		return nil
+	default:
+		return status.Errorf(codes.InvalidArgument, "status must be 'pass' or 'fail', got: %s", statusValue)
+	}
+}
+
+// parseHealthStatus converts a string status to the gRPC health status constant.
+// This function assumes the status has already been validated by validateHealthStatus.
+// "pass" returns SERVING, "fail" returns NOT_SERVING, any other value defaults to SERVING.
+func parseHealthStatus(statusValue string) grpc_health_v1.HealthCheckResponse_ServingStatus {
+	switch statusValue {
+	case "fail":
+		return grpc_health_v1.HealthCheckResponse_NOT_SERVING
+	default:
+		return grpc_health_v1.HealthCheckResponse_SERVING
+	}
 }
