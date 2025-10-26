@@ -433,7 +433,7 @@ func (s *InfrabinService) testHTTPConnection(ctx context.Context, target, scheme
 			DurationMs: duration.Milliseconds(),
 		}, nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Read and discard response body to enable connection reuse within the transport.
 	// Limited to MaxEgressResponseBodySize to prevent memory exhaustion.
