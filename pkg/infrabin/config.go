@@ -26,6 +26,10 @@ const (
 	MaxDelay                   = 120 * time.Second
 	ProxyAllowRegexp           = ".*"
 	IntermittentErrors         = 2
+	// EgressTimeout is the default timeout for egress HTTP/HTTPS connectivity tests.
+	// Set to 3 seconds to balance between detecting connection issues quickly and
+	// allowing sufficient time for slower networks or high-latency connections.
+	EgressTimeout = 3 * time.Second
 )
 
 var (
@@ -77,6 +81,9 @@ func ReadConfiguration() error {
 
 	// Consecutive errors for intermittent endpoint
 	viper.SetDefault("intermittentErrors", IntermittentErrors)
+
+	// Egress endpoint timeout
+	viper.SetDefault("egressTimeout", EgressTimeout)
 
 	// http timeouts
 	viper.SetDefault("httpWriteTimeout", HTTPWriteTimeout)

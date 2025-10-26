@@ -499,6 +499,437 @@ func TestIntermittentHandler(t *testing.T) {
 
 }
 
+func TestEgressDNSHandler(t *testing.T) {
+	testCases := []struct {
+		name           string
+		host           string
+		expectedStatus int
+		expectSuccess  bool
+	}{
+		{
+			name:           "valid hostname",
+			host:           "google.com",
+			expectedStatus: http.StatusOK,
+			expectSuccess:  true,
+		},
+		{
+			name:           "localhost",
+			host:           "localhost",
+			expectedStatus: http.StatusOK,
+			expectSuccess:  true,
+		},
+		{
+			name:           "invalid hostname",
+			host:           "this-domain-does-not-exist-12345.invalid",
+			expectedStatus: http.StatusOK,
+			expectSuccess:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", fmt.Sprintf("/egress/dns/%s", tc.host), nil)
+
+			rr := httptest.NewRecorder()
+			handler := newHTTPInfrabinHandler()
+			handler.ServeHTTP(rr, req)
+
+			if rr.Code != tc.expectedStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, tc.expectedStatus)
+			}
+
+			// Parse as generic JSON to handle protobuf's int64-as-string
+			var responseJSON map[string]interface{}
+			if err := json.Unmarshal(rr.Body.Bytes(), &responseJSON); err != nil {
+				t.Fatalf("failed to unmarshal response: %v", err)
+			}
+
+			// Protobuf omits false boolean values from JSON, so absence means false
+			success, ok := responseJSON["success"].(bool)
+			if !ok {
+				success = false // Default value when omitted
+			}
+			if success != tc.expectSuccess {
+				errorMsg := ""
+				if e, ok := responseJSON["error"].(string); ok {
+					errorMsg = e
+				}
+				t.Errorf("expected success=%v, got success=%v, error=%s", tc.expectSuccess, success, errorMsg)
+			}
+
+			target, ok := responseJSON["target"].(string)
+			if !ok {
+				t.Fatal("target field not found or not a string")
+			}
+			if target != tc.host {
+				t.Errorf("expected target=%s, got target=%s", tc.host, target)
+			}
+
+			if tc.expectSuccess {
+				resolvedIps, ok := responseJSON["resolvedIps"].([]interface{})
+				if !ok || len(resolvedIps) == 0 {
+					t.Error("expected at least one resolved IP for successful DNS lookup")
+				}
+			}
+
+			// durationMs may be omitted by protobuf JSON marshaling when it's 0 (very fast localhost DNS)
+			// Just verify it's a valid number if present
+			if durationMs, ok := responseJSON["durationMs"]; ok {
+				if _, isFloat := durationMs.(float64); !isFloat {
+					if _, isString := durationMs.(string); !isString {
+						t.Errorf("expected durationMs to be a number, got %T: %v", durationMs, durationMs)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestEgressHTTPHandler(t *testing.T) {
+	// Create a mock HTTP server
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("OK")); err != nil {
+			t.Fatalf("Failed to write response: %v", err)
+		}
+	}))
+	defer mockServer.Close()
+
+	// Extract host:port from mock server URL (remove http://)
+	target := mockServer.URL[7:] // Remove "http://"
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/egress/http/%s", target), nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+
+	var responseJSON map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &responseJSON); err != nil {
+		t.Fatalf("failed to unmarshal response: %v, body: %s", err, rr.Body.String())
+	}
+
+	success, ok := responseJSON["success"].(bool)
+	if !ok {
+		success = false // Protobuf omits false
+	}
+	if !success {
+		errorMsg := ""
+		if e, ok := responseJSON["error"].(string); ok {
+			errorMsg = e
+		}
+		t.Errorf("expected success=true, got success=%v, error=%s", success, errorMsg)
+	}
+
+	// statusCode can be float64 or string depending on JSON unmarshaling
+	if statusCode, ok := responseJSON["statusCode"].(float64); ok {
+		if int(statusCode) != 200 {
+			t.Errorf("expected status code 200, got %v", statusCode)
+		}
+	}
+
+	// durationMs may be omitted by protobuf JSON marshaling when it's 0 (very fast localhost connections)
+	// Just verify it's a valid number if present
+	if durationMs, ok := responseJSON["durationMs"]; ok {
+		if _, isFloat := durationMs.(float64); !isFloat {
+			if _, isString := durationMs.(string); !isString {
+				t.Errorf("expected durationMs to be a number, got %T: %v", durationMs, durationMs)
+			}
+		}
+	}
+}
+
+func TestEgressHTTPHandlerFailure(t *testing.T) {
+	// Use an invalid port to force connection failure
+	req := httptest.NewRequest("GET", "/egress/http/localhost:1", nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+
+	var responseJSON map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &responseJSON); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	success, _ := responseJSON["success"].(bool)
+	if success {
+		t.Error("expected success=false for connection to invalid port")
+	}
+
+	if _, ok := responseJSON["error"].(string); !ok {
+		t.Error("expected error message to be set")
+	}
+}
+
+func TestEgressHTTPSHandler(t *testing.T) {
+	// Create a mock HTTPS server
+	mockServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("OK")); err != nil {
+			t.Fatalf("Failed to write response: %v", err)
+		}
+	}))
+	defer mockServer.Close()
+
+	// Extract host:port from mock server URL (remove https://)
+	target := mockServer.URL[8:] // Remove "https://"
+
+	// Note: This will fail certificate verification since it's a test server
+	// That's expected behavior - we test insecure mode separately
+	req := httptest.NewRequest("GET", fmt.Sprintf("/egress/https/%s", target), nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+
+	var responseJSON map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &responseJSON); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	// httptest.NewTLSServer creates a self-signed cert, so this should fail
+	success, _ := responseJSON["success"].(bool)
+	if success {
+		t.Error("expected success=false for self-signed certificate without insecure mode")
+	}
+
+	if _, ok := responseJSON["error"].(string); !ok {
+		t.Error("expected error message about certificate verification")
+	}
+}
+
+func TestEgressHTTPSInsecureHandler(t *testing.T) {
+	// Create a mock HTTPS server
+	mockServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("OK")); err != nil {
+			t.Fatalf("Failed to write response: %v", err)
+		}
+	}))
+	defer mockServer.Close()
+
+	// Extract host:port from mock server URL (remove https://)
+	target := mockServer.URL[8:] // Remove "https://"
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/egress/https/insecure/%s", target), nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+
+	var responseJSON map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &responseJSON); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	// With insecure mode, this should succeed
+	success, _ := responseJSON["success"].(bool)
+	if !success {
+		errorMsg := ""
+		if e, ok := responseJSON["error"].(string); ok {
+			errorMsg = e
+		}
+		t.Errorf("expected success=true with insecure mode, got success=%v, error=%s", success, errorMsg)
+	}
+
+	if statusCode, ok := responseJSON["statusCode"].(float64); ok {
+		if int(statusCode) != 200 {
+			t.Errorf("expected status code 200, got %v", statusCode)
+		}
+	}
+
+	if _, ok := responseJSON["durationMs"]; !ok {
+		t.Error("expected durationMs field to be present")
+	}
+}
+
+func TestEgressHTTPDefaultPort(t *testing.T) {
+	// Test that default port 80 is added when not specified
+	// This will fail to connect, but we can verify the target includes the port
+	req := httptest.NewRequest("GET", "/egress/http/example.com", nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	var responseJSON map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &responseJSON); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	target, _ := responseJSON["target"].(string)
+	if target != "example.com:80" {
+		t.Errorf("expected target to include default port 80, got %s", target)
+	}
+}
+
+func TestEgressHTTPSDefaultPort(t *testing.T) {
+	// Test that default port 443 is added when not specified
+	req := httptest.NewRequest("GET", "/egress/https/example.com", nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	var responseJSON map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &responseJSON); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	target, _ := responseJSON["target"].(string)
+	if target != "example.com:443" {
+		t.Errorf("expected target to include default port 443, got %s", target)
+	}
+}
+
+func TestEgressHTTPWithCustomDNS(t *testing.T) {
+	// Create a mock HTTP server
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("OK")); err != nil {
+			t.Fatalf("Failed to write response: %v", err)
+		}
+	}))
+	defer mockServer.Close()
+
+	// Extract host:port from mock server URL (remove http://)
+	target := mockServer.URL[7:] // Remove "http://"
+
+	// Test with custom DNS server specified (though it won't actually be used for localhost)
+	// This test verifies the @ syntax is correctly parsed
+	targetWithDNS := target + "@8.8.8.8:53"
+	req := httptest.NewRequest("GET", fmt.Sprintf("/egress/http/%s", targetWithDNS), nil)
+
+	rr := httptest.NewRecorder()
+	handler := newHTTPInfrabinHandler()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+
+	var responseJSON map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &responseJSON); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	// Verify the target in response is the hostPort (without DNS server)
+	// The DNS server part is used for resolution but not included in the response target
+	responseTarget, _ := responseJSON["target"].(string)
+	if responseTarget != target {
+		t.Errorf("expected target %s in response (without DNS server), got %s", target, responseTarget)
+	}
+
+	// Verify success
+	success, _ := responseJSON["success"].(bool)
+	if !success {
+		errorMsg := ""
+		if e, ok := responseJSON["error"].(string); ok {
+			errorMsg = e
+		}
+		t.Errorf("expected success=true, got success=%v, error=%s", success, errorMsg)
+	}
+}
+
+func TestParseTargetAndDNS(t *testing.T) {
+	testCases := []struct {
+		name     string
+		target   string
+		wantHost string
+		wantDNS  string
+	}{
+		{
+			name:     "host and port with DNS",
+			target:   "example.com:443@8.8.8.8:53",
+			wantHost: "example.com:443",
+			wantDNS:  "8.8.8.8:53",
+		},
+		{
+			name:     "host only with DNS",
+			target:   "example.com@8.8.8.8:53",
+			wantHost: "example.com",
+			wantDNS:  "8.8.8.8:53",
+		},
+		{
+			name:     "host and port without DNS",
+			target:   "example.com:443",
+			wantHost: "example.com:443",
+			wantDNS:  "",
+		},
+		{
+			name:     "host only without DNS",
+			target:   "example.com",
+			wantHost: "example.com",
+			wantDNS:  "",
+		},
+		{
+			name:     "IP address with port and DNS",
+			target:   "192.168.1.1:8080@1.1.1.1:53",
+			wantHost: "192.168.1.1:8080",
+			wantDNS:  "1.1.1.1:53",
+		},
+		{
+			name:     "multiple @ symbols takes first as separator",
+			target:   "host:443@dns1:53@dns2:53",
+			wantHost: "host:443",
+			wantDNS:  "dns1:53", // Only first @ is separator, rest are part of subsequent string
+		},
+		{
+			name:     "empty string",
+			target:   "",
+			wantHost: "",
+			wantDNS:  "",
+		},
+		{
+			name:     "only @ symbol",
+			target:   "@",
+			wantHost: "",
+			wantDNS:  "",
+		},
+		{
+			name:     "host with trailing @",
+			target:   "example.com@",
+			wantHost: "example.com",
+			wantDNS:  "",
+		},
+		{
+			name:     "DNS without host",
+			target:   "@8.8.8.8:53",
+			wantHost: "",
+			wantDNS:  "8.8.8.8:53",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotHost, gotDNS := parseTargetAndDNS(tc.target)
+			if gotHost != tc.wantHost {
+				t.Errorf("parseTargetAndDNS(%q) host = %q, want %q", tc.target, gotHost, tc.wantHost)
+			}
+			if gotDNS != tc.wantDNS {
+				t.Errorf("parseTargetAndDNS(%q) DNS = %q, want %q", tc.target, gotDNS, tc.wantDNS)
+			}
+		})
+	}
+}
+
 func TestHTTPMetricsCollection(t *testing.T) {
 	// Create HTTP server with metrics middleware
 	handler := newHTTPInfrabinHandler()

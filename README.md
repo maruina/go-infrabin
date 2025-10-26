@@ -23,6 +23,7 @@ See the [README](./chart/go-infrabin/README.md).
 
 * `--aws-metadata-endpoint`: AWS Metadata Endpoint (default `http://169.254.169.254/latest/meta-data/`)
 * `--drain-timeout`: Drain timeout (default `15s`)
+* `--egress-timeout`: Timeout for egress HTTP/HTTPS requests (default `3s`)
 * `--enable-proxy-endpoint`: When enabled allows `/proxy` and `/aws` endpoints
 * `--proxy-allow-regexp`: Regular expression to allow URL called by the `/proxy` endpoint (default `".*"`)
 * `--intermittent-errors`: Number of consecutive 503 errors before returning 200 when calling the `/intermittent` endpoint (default `2`)
@@ -85,6 +86,40 @@ The service exposes both gRPC (`infrabin.Infrabin`) and REST endpoints:
 | `GET /any/{path}` | Wildcard path echo |
 | `GET /intermittent` | Simulate intermittent failures |
 | `GET /bytes/{number}` | Generate random bytes |
+| `GET /egress/dns/{host}` | Test DNS resolution for a given hostname |
+| `GET /egress/http/{target}` | Test HTTP connectivity (port 80 by default) |
+| `GET /egress/https/{target}` | Test HTTPS connectivity with certificate verification (port 443) |
+| `GET /egress/https/insecure/{target}` | Test HTTPS connectivity without certificate verification |
+
+#### Egress Endpoints
+
+The egress endpoints support testing network connectivity and DNS resolution:
+
+**DNS Resolution**:
+```bash
+curl http://localhost:8888/egress/dns/google.com
+# Returns resolved IP addresses and duration
+```
+
+**HTTP/HTTPS Connectivity**:
+```bash
+# Test HTTP connection (default port 80)
+curl http://localhost:8888/egress/http/example.com
+
+# Test HTTPS connection with certificate verification (default port 443)
+curl http://localhost:8888/egress/https/example.com
+
+# Test with custom port
+curl http://localhost:8888/egress/http/example.com:8080
+
+# Test with custom DNS server (format: target@dns_server:port)
+curl http://localhost:8888/egress/http/example.com@8.8.8.8:53
+
+# Test HTTPS without certificate verification (useful for self-signed certs)
+curl http://localhost:8888/egress/https/insecure/self-signed.example.com
+```
+
+All egress endpoints return timing information even on failure, which is useful for diagnosing network issues. The timeout can be configured with `--egress-timeout` (default: 3s).
 
 For detailed request/response schemas and field descriptions, see `/openapi.json`.
 
