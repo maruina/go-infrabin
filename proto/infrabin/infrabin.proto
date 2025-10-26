@@ -106,6 +106,51 @@ service Infrabin {
         };
     }
 
+    // EgressDNS performs DNS resolution for the specified host.
+    // Host format: "hostname[@dns_server:port]" where @dns_server:port is optional. Default port: 53.
+    // If DNS server is specified, it will be used for resolution instead of system DNS.
+    // Example: "example.com@8.8.8.8:53" uses Google DNS for resolution.
+    // Tests DNS connectivity and resolution capabilities.
+    rpc EgressDNS(EgressDNSRequest) returns (EgressResponse) {
+        option (google.api.http) = {
+            get: "/egress/dns/{host}"
+        };
+    }
+
+    // EgressHTTP attempts an HTTP connection to the specified target.
+    // Target format: "hostname:port[@dns]" where @dns is optional. Default port: 80.
+    // If DNS is specified, it will be used for name resolution instead of system DNS.
+    // Example: "example.com:8080@8.8.8.8:53" uses Google DNS for resolution.
+    // Tests outbound HTTP connectivity. Timeout is configurable via --egress-timeout flag (default: 3s).
+    rpc EgressHTTP(EgressHTTPRequest) returns (EgressResponse) {
+        option (google.api.http) = {
+            get: "/egress/http/{target}"
+        };
+    }
+
+    // EgressHTTPS attempts an HTTPS connection to the specified target.
+    // Target format: "hostname:port[@dns]" where @dns is optional. Default port: 443.
+    // If DNS is specified, it will be used for name resolution instead of system DNS.
+    // Example: "example.com@1.1.1.1:53" uses Cloudflare DNS for resolution.
+    // Tests outbound HTTPS connectivity with certificate verification.
+    // Timeout is configurable via --egress-timeout flag (default: 3s).
+    rpc EgressHTTPS(EgressHTTPSRequest) returns (EgressResponse) {
+        option (google.api.http) = {
+            get: "/egress/https/{target}"
+        };
+    }
+
+    // EgressHTTPSInsecure attempts an HTTPS connection without certificate verification.
+    // Target format: "hostname:port[@dns]" where @dns is optional. Default port: 443.
+    // If DNS is specified, it will be used for name resolution instead of system DNS.
+    // Useful for testing connectivity to endpoints with self-signed certificates.
+    // Timeout is configurable via --egress-timeout flag (default: 3s).
+    rpc EgressHTTPSInsecure(EgressHTTPSInsecureRequest) returns (EgressResponse) {
+        option (google.api.http) = {
+            get: "/egress/https/insecure/{target}"
+        };
+    }
+
 }
 
 
@@ -233,4 +278,50 @@ message RandomDataRequest {
 message RandomDataResponse {
 	// data contains the random bytes encoded as base64 in JSON responses.
 	bytes data = 1;
+}
+
+// EgressDNSRequest specifies the host to perform DNS resolution on.
+message EgressDNSRequest {
+	// host is "hostname[@dns_server:port]" where @dns_server:port is optional. Default port: 53.
+	// Example: "example.com@8.8.8.8:53" uses Google DNS for resolution.
+	string host = 1;
+}
+
+// EgressHTTPRequest specifies the target for HTTP connectivity testing.
+message EgressHTTPRequest {
+	// target is "hostname:port[@dns]" where @dns is optional. Default port: 80.
+	// Example: "example.com:8080@8.8.8.8:53" uses Google DNS for resolution.
+	string target = 1;
+}
+
+// EgressHTTPSRequest specifies the target for HTTPS connectivity testing.
+message EgressHTTPSRequest {
+	// target is "hostname:port[@dns]" where @dns is optional. Default port: 443.
+	// Example: "example.com@1.1.1.1:53" uses Cloudflare DNS for resolution.
+	string target = 1;
+}
+
+// EgressHTTPSInsecureRequest specifies the target for insecure HTTPS connectivity testing.
+message EgressHTTPSInsecureRequest {
+	// target is "hostname:port[@dns]" where @dns is optional. Default port: 443.
+	// Example: "self-signed.example.com@8.8.4.4:53" for self-signed certs.
+	string target = 1;
+}
+
+// EgressResponse contains the result of egress connectivity tests.
+message EgressResponse {
+	// success indicates whether the operation succeeded.
+	bool success = 1;
+	// message contains a human-readable description of the result.
+	string message = 2;
+	// error contains error details if the operation failed.
+	string error = 3;
+	// target is the actual target that was tested (with default port if applicable).
+	string target = 4;
+	// resolvedIps contains the list of IP addresses resolved for DNS queries.
+	repeated string resolvedIps = 5;
+	// statusCode contains the HTTP status code for HTTP/HTTPS requests.
+	int32 statusCode = 6;
+	// durationMs contains the duration of the operation in milliseconds.
+	int64 durationMs = 7;
 }

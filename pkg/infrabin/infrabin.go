@@ -6,7 +6,10 @@ package infrabin
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -218,5 +221,229 @@ func (s *InfrabinService) RandomData(ctx context.Context, request *RandomDataReq
 		RandomData: &RandomDataResponse{
 			Data: response,
 		},
+	}, nil
+}
+
+func (s *InfrabinService) EgressDNS(ctx context.Context, request *EgressDNSRequest) (*EgressResponse, error) {
+	if request.Host == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "host must not be empty")
+	}
+
+	hostname, dnsServer := parseTargetAndDNS(request.Host)
+	resolver, err := s.createDNSResolver(dnsServer)
+	if err != nil {
+		return &EgressResponse{
+			Success: false,
+			Error:   err.Error(),
+			Target:  hostname,
+		}, nil
+	}
+
+	start := time.Now()
+	ips, err := resolver.LookupHost(ctx, hostname)
+	duration := time.Since(start)
+
+	if err != nil {
+		return &EgressResponse{
+			Success:    false,
+			Error:      err.Error(),
+			Target:     hostname,
+			DurationMs: duration.Milliseconds(),
+		}, nil
+	}
+
+	return &EgressResponse{
+		Success:     true,
+		Message:     fmt.Sprintf("Successfully resolved %s to %d IP address(es)", hostname, len(ips)),
+		Target:      hostname,
+		ResolvedIps: ips,
+		DurationMs:  duration.Milliseconds(),
+	}, nil
+}
+
+// createDNSResolver creates a DNS resolver, using a custom DNS server if specified.
+// Returns system resolver when dnsServer is empty.
+func (s *InfrabinService) createDNSResolver(dnsServer string) (*net.Resolver, error) {
+	if dnsServer == "" {
+		return &net.Resolver{}, nil
+	}
+
+	// Add default port 53 if not specified
+	if !strings.Contains(dnsServer, ":") {
+		dnsServer = fmt.Sprintf("%s:53", dnsServer)
+	}
+
+	// Validate DNS server address format
+	if _, _, err := net.SplitHostPort(dnsServer); err != nil {
+		return nil, fmt.Errorf("invalid DNS server address %q: %w", dnsServer, err)
+	}
+
+	timeout := viper.GetDuration("egressTimeout")
+	return &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: timeout,
+			}
+			return d.DialContext(ctx, "udp", dnsServer)
+		},
+	}, nil
+}
+
+func (s *InfrabinService) EgressHTTP(ctx context.Context, request *EgressHTTPRequest) (*EgressResponse, error) {
+	return s.testHTTPConnection(ctx, request.Target, "http", 80, false)
+}
+
+func (s *InfrabinService) EgressHTTPS(ctx context.Context, request *EgressHTTPSRequest) (*EgressResponse, error) {
+	return s.testHTTPConnection(ctx, request.Target, "https", 443, false)
+}
+
+func (s *InfrabinService) EgressHTTPSInsecure(ctx context.Context, request *EgressHTTPSInsecureRequest) (*EgressResponse, error) {
+	return s.testHTTPConnection(ctx, request.Target, "https", 443, true)
+}
+
+// parseTargetAndDNS parses target in format "host:port@dns" or "host:port"
+// Returns hostPort, dnsServer, and error
+func parseTargetAndDNS(target string) (hostPort, dnsServer string) {
+	// Split by @ to separate host:port from DNS server
+	parts := strings.Split(target, "@")
+	hostPort = parts[0]
+	if len(parts) > 1 {
+		dnsServer = parts[1]
+	}
+	return hostPort, dnsServer
+}
+
+const (
+	// MaxEgressResponseBodySize is the maximum response body size to read from egress HTTP/HTTPS requests.
+	// Limited to 1MB to prevent memory exhaustion from large responses.
+	MaxEgressResponseBodySize = 1024 * 1024
+)
+
+// testHTTPConnection performs an HTTP/HTTPS connectivity test.
+// Target format: "host:port@dns" where @dns is optional
+// If DNS is specified, it will be used for resolution instead of system DNS.
+//
+// Design note: This function returns success/failure information in the response body
+// rather than gRPC status codes. This allows clients to receive timing information
+// even when the connectivity test fails, which is valuable for diagnosing network issues.
+func (s *InfrabinService) testHTTPConnection(ctx context.Context, target, scheme string, defaultPort int, insecure bool) (*EgressResponse, error) {
+	if target == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "target must not be empty")
+	}
+
+	// Parse target to extract host:port and optional DNS server
+	hostPort, dnsServer := parseTargetAndDNS(target)
+
+	// Add default port if not specified
+	if !strings.Contains(hostPort, ":") {
+		hostPort = fmt.Sprintf("%s:%d", hostPort, defaultPort)
+	}
+
+	// Validate DNS server address if provided
+	if dnsServer != "" {
+		if _, _, err := net.SplitHostPort(dnsServer); err != nil {
+			return &EgressResponse{
+				Success: false,
+				Error:   fmt.Sprintf("invalid DNS server address %q: %v", dnsServer, err),
+				Target:  hostPort,
+			}, nil
+		}
+	}
+
+	// Build URL
+	testURL := fmt.Sprintf("%s://%s", scheme, hostPort)
+
+	// Get timeout from configuration
+	timeout := viper.GetDuration("egressTimeout")
+
+	// Create HTTP transport with appropriate TLS configuration
+	// Note: We create a new transport for each request to support custom DNS servers.
+	// For requests without custom DNS, connection pooling still occurs within the transport.
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: insecure,
+		},
+	}
+
+	if dnsServer != "" {
+		// Create custom resolver with specified DNS server
+		resolver := &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				d := net.Dialer{
+					Timeout: timeout,
+				}
+				return d.DialContext(ctx, "udp", dnsServer)
+			},
+		}
+
+		// Custom dialer that uses the custom resolver
+		transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+
+			// Resolve using custom DNS
+			ips, err := resolver.LookupHost(ctx, host)
+			if err != nil {
+				return nil, err
+			}
+
+			// Use first resolved IP
+			if len(ips) == 0 {
+				return nil, fmt.Errorf("no IP addresses found for %s", host)
+			}
+
+			// Dial to resolved IP
+			d := net.Dialer{
+				Timeout: timeout,
+			}
+			return d.DialContext(ctx, network, net.JoinHostPort(ips[0], port))
+		}
+	}
+
+	// Create HTTP client with timeout and custom transport
+	client := &http.Client{
+		Timeout:   timeout,
+		Transport: transport,
+	}
+
+	// Make request
+	start := time.Now()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, testURL, nil)
+	if err != nil {
+		return &EgressResponse{
+			Success:    false,
+			Error:      fmt.Sprintf("Failed to create request: %v", err),
+			Target:     hostPort,
+			DurationMs: time.Since(start).Milliseconds(),
+		}, nil
+	}
+
+	resp, err := client.Do(req)
+	duration := time.Since(start)
+
+	if err != nil {
+		return &EgressResponse{
+			Success:    false,
+			Error:      err.Error(),
+			Target:     hostPort,
+			DurationMs: duration.Milliseconds(),
+		}, nil
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	// Read and discard response body to enable connection reuse within the transport.
+	// Limited to MaxEgressResponseBodySize to prevent memory exhaustion.
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, MaxEgressResponseBodySize))
+
+	return &EgressResponse{
+		Success:    true,
+		Message:    fmt.Sprintf("Successfully connected to %s", hostPort),
+		Target:     hostPort,
+		StatusCode: int32(resp.StatusCode),
+		DurationMs: duration.Milliseconds(),
 	}, nil
 }
