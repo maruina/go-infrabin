@@ -1,5 +1,8 @@
+version: 2
+
 changelog:
   skip: true
+
 # Build customization
 builds:
   - main: ./cmd/go-infrabin/main.go
@@ -10,6 +13,7 @@ builds:
       - linux
     goarch:
       - amd64
+
 # Archive customization
 archives:
   - format: tar.gz
