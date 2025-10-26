@@ -1,7 +1,7 @@
 version: 2
 
 changelog:
-  skip: true
+  disable: true
 
 # Build customization
 builds:
