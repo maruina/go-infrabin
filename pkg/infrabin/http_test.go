@@ -913,7 +913,7 @@ func TestParseTargetAndDNS(t *testing.T) {
 			name:     "multiple @ symbols takes first as separator",
 			target:   "host:443@dns1:53@dns2:53",
 			wantHost: "host:443",
-			wantDNS:  "dns1:53", // Only first @ is separator, rest are part of subsequent string
+			wantDNS:  "dns1:53@dns2:53", // Only first @ is separator, rest are part of DNS string
 		},
 		{
 			name:     "empty string",

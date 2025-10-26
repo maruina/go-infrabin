@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// Server wraps the gRPC server and implements infrabin.Infrabin
+// GRPCServer wraps the gRPC server and implements infrabin.Infrabin
 type GRPCServer struct {
 	Name            string
 	Server          *grpc.Server
@@ -82,7 +82,8 @@ func NewGRPCServer() (*GRPCServer, error) {
 		return nil, fmt.Errorf("failed to create AWS STS client: %w", err)
 	}
 	infrabinService := &InfrabinService{
-		STSClient: stsClient,
+		STSClient:     stsClient,
+		HealthService: healthServer,
 	}
 
 	// Register gRPC services on the grpc server
@@ -93,6 +94,9 @@ func NewGRPCServer() (*GRPCServer, error) {
 
 	// Set the health of the infrabin service to healthy
 	healthServer.SetServingStatus("infrabin.Infrabin", grpc_health_v1.HealthCheckResponse_SERVING)
+	// Set liveness and readiness to healthy by default
+	healthServer.SetServingStatus("liveness", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("readiness", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &GRPCServer{
 		Name:            "grpc",
