@@ -37,13 +37,16 @@ var (
 		[]string{"source_az", "target_az", "result"},
 	)
 
+	// crossAZTestDuration tracks connectivity test latency at AZ-level granularity.
+	// Uses only AZ labels (not pod names) to keep cardinality low and suitable for production.
+	// With N availability zones, this creates N*N metric series (e.g., 3 AZs = 9 series).
 	crossAZTestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "crossaz_test_duration_milliseconds",
 			Help:    "Duration of cross-AZ connectivity tests in milliseconds",
 			Buckets: prometheus.ExponentialBuckets(10, 2, 10), // 10ms to ~10s
 		},
-		[]string{"source_az", "source_pod", "target_az", "destination_pod"},
+		[]string{"source_az", "target_az"},
 	)
 
 	crossAZPodsDiscovered = promauto.NewGaugeVec(

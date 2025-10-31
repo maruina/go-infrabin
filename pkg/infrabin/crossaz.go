@@ -202,22 +202,9 @@ func (s *InfrabinService) testPodConnectivity(ctx context.Context, pod K8sPodInf
 	}
 	crossAZTestsTotal.WithLabelValues(sourceAZ, pod.AvailabilityZone, result).Inc()
 
-	// IMPORTANT: High Cardinality Metric Warning
-	// The crossAZTestDuration metric uses pod names as labels (source_pod, destination_pod).
-	// This creates N*M metric series for N source pods and M destination pods in different AZs.
-	// Example cardinalities:
-	//   - 10 pods across 3 AZs: ~100 series (manageable)
-	//   - 50 pods across 3 AZs: ~2,500 series (acceptable)
-	//   - 100 pods across 3 AZs: ~10,000 series (warning threshold)
-	//   - 500 pods across 3 AZs: ~250,000 series (will exhaust Prometheus memory)
-	//
-	// This high cardinality is intentional for detailed debugging at small scale (<50 pods).
-	// For large deployments, consider one of:
-	//   1. Use crossAZTestsTotal (AZ-level only, low cardinality) for monitoring
-	//   2. Limit replica count when CrossAZ endpoint is enabled
-	//   3. Query logs instead of metrics for per-pod diagnostics
-	//   4. Implement a separate low-cardinality metric build
-	crossAZTestDuration.WithLabelValues(sourceAZ, sourcePod, pod.AvailabilityZone, pod.Name).Observe(float64(duration.Milliseconds()))
+	// Record latency at AZ-level granularity (low cardinality: N*N series for N AZs).
+	// For per-pod diagnostics, use crossAZTestsTotal with result labels or query logs.
+	crossAZTestDuration.WithLabelValues(sourceAZ, pod.AvailabilityZone).Observe(float64(duration.Milliseconds()))
 
 	return &CrossAZTest{
 		PodName:    pod.Name,

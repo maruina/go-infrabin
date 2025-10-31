@@ -161,10 +161,10 @@ func (c *Client) extractAZWithCache(ctx context.Context, pod *corev1.Pod, nodeCa
 	return "", fmt.Errorf("no availability zone label found on node %s (expected topology.kubernetes.io/zone or failure-domain.beta.kubernetes.io/zone)", pod.Spec.NodeName)
 }
 
-// extractAZ extracts the availability zone for a pod without caching.
-// This is kept for backwards compatibility with tests that use it directly.
-// It first checks the pod's node selector for AZ labels.
-// If not found, it queries the node's labels.
+// extractAZ extracts the availability zone for a single pod.
+// This is a convenience wrapper around extractAZWithCache for single-pod queries
+// (primarily used by tests). For bulk operations, use DiscoverPods which benefits
+// from node label caching across multiple pods.
 func (c *Client) extractAZ(ctx context.Context, pod *corev1.Pod) (string, error) {
 	nodeCache := make(map[string]string)
 	return c.extractAZWithCache(ctx, pod, nodeCache)

@@ -217,7 +217,7 @@ func TestParseHealthStatus(t *testing.T) {
 	}
 }
 
-func TestDerefString(t *testing.T) {
+func TestStringValue(t *testing.T) {
 	tests := []struct {
 		name string
 		ptr  *string
@@ -243,9 +243,9 @@ func TestDerefString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := derefString(tt.ptr)
+			got := stringValue(tt.ptr)
 			if got != tt.want {
-				t.Errorf("derefString() = %v, want %v", got, tt.want)
+				t.Errorf("stringValue() = %v, want %v", got, tt.want)
 			}
 		})
 	}

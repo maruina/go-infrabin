@@ -56,8 +56,9 @@ type HealthService interface {
 	SetServingStatus(service string, status grpc_health_v1.HealthCheckResponse_ServingStatus)
 }
 
-// derefString safely dereferences a string pointer, returning empty string if nil.
-func derefString(s *string) string {
+// stringValue safely dereferences a string pointer, returning empty string if nil.
+// This follows Go conventions like errors.Is() or time.Parse() that return values.
+func stringValue(s *string) string {
 	if s == nil {
 		return ""
 	}
@@ -243,9 +244,9 @@ func (s *InfrabinService) AWSGetCallerIdentity(ctx context.Context, _ *Empty) (*
 	// Safely dereference pointers with default values to prevent nil pointer panics
 	return &Response{
 		GetCallerIdentity: &GetCallerIdentityResponse{
-			Account: derefString(response.Account),
-			Arn:     derefString(response.Arn),
-			UserId:  derefString(response.UserId),
+			Account: stringValue(response.Account),
+			Arn:     stringValue(response.Arn),
+			UserId:  stringValue(response.UserId),
 		},
 	}, nil
 }
