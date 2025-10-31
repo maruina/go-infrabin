@@ -16,15 +16,15 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// k8sClientWrapper wraps the internal k8s.ClientAdapter and implements the K8sClient interface.
+// k8sClientWrapper wraps the internal k8s.Client and implements the K8sClient interface.
 // It converts between internal k8s.PodInfo and infrabin.K8sPodInfo types.
 type k8sClientWrapper struct {
-	adapter *k8s.ClientAdapter
+	client *k8s.Client
 }
 
 // DiscoverPods implements the K8sClient interface by converting k8s.PodInfo to K8sPodInfo.
 func (w *k8sClientWrapper) DiscoverPods(ctx context.Context, labelSelector string) ([]K8sPodInfo, error) {
-	pods, err := w.adapter.GetPods(ctx, labelSelector)
+	pods, err := w.client.DiscoverPods(ctx, labelSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -118,8 +118,7 @@ func NewGRPCServer() (*GRPCServer, error) {
 			// fail fast rather than silently running with a broken endpoint.
 			return nil, fmt.Errorf("failed to initialize Kubernetes client for CrossAZ endpoint: %w", err)
 		}
-		adapter := k8s.NewClientAdapter(client)
-		k8sClient = &k8sClientWrapper{adapter: adapter}
+		k8sClient = &k8sClientWrapper{client: client}
 		log.Printf("Kubernetes client initialized for CrossAZ endpoint")
 	}
 

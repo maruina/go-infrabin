@@ -148,20 +148,3 @@ func (c *Client) extractAZ(ctx context.Context, pod *corev1.Pod) (string, error)
 	// Could not determine AZ from pod or node
 	return "", fmt.Errorf("no availability zone label found on node %s (expected topology.kubernetes.io/zone or failure-domain.beta.kubernetes.io/zone)", pod.Spec.NodeName)
 }
-
-// ClientAdapter wraps Client and provides a method that returns PodInfo.
-// The caller is responsible for converting PodInfo to their required type.
-type ClientAdapter struct {
-	client *Client
-}
-
-// NewClientAdapter creates a new adapter for the Kubernetes client.
-func NewClientAdapter(client *Client) *ClientAdapter {
-	return &ClientAdapter{client: client}
-}
-
-// GetPods returns the raw PodInfo list from the client.
-// This allows the caller to convert to their own types.
-func (a *ClientAdapter) GetPods(ctx context.Context, labelSelector string) ([]PodInfo, error) {
-	return a.client.DiscoverPods(ctx, labelSelector)
-}
