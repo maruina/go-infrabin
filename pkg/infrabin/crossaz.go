@@ -123,7 +123,9 @@ func (s *InfrabinService) testCrossAZConnectivity(ctx context.Context, pods []K8
 		return []*CrossAZTest{}
 	}
 
-	// Check context once before starting any goroutines
+	// Fail fast if context is already cancelled/expired before spawning goroutines.
+	// This prevents unnecessary goroutine creation overhead when the parent request
+	// has already timed out or been cancelled.
 	if ctx.Err() != nil {
 		return []*CrossAZTest{}
 	}

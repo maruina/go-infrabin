@@ -1,6 +1,7 @@
 package infrabin
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -106,8 +107,9 @@ func ReadConfiguration() error {
 	viper.SetDefault("crossAZTargetPort", CrossAZTargetPort)
 
 	if err := viper.ReadInConfig(); err != nil {
-		// Use two-value type assertion to safely check error type
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		// Use errors.As for type-safe error checking (recommended over type assertion)
+		var configNotFoundErr viper.ConfigFileNotFoundError
+		if errors.As(err, &configNotFoundErr) {
 			// Will just use the default configuration.
 			log.Printf("No config file found, using defaults")
 		} else {
