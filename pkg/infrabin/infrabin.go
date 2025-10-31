@@ -26,6 +26,7 @@ import (
 
 	"github.com/maruina/go-infrabin/internal/aws"
 	"github.com/maruina/go-infrabin/internal/helpers"
+	"github.com/maruina/go-infrabin/internal/k8s"
 	"github.com/mazen160/go-random"
 	"github.com/spf13/viper"
 )
@@ -47,12 +48,7 @@ type K8sClient interface {
 }
 
 // K8sPodInfo contains essential information about a discovered pod.
-// This is a local type to avoid direct dependency on internal/k8s in the interface.
-type K8sPodInfo struct {
-	Name             string
-	IP               string
-	AvailabilityZone string
-}
+type K8sPodInfo = k8s.PodInfo
 
 // HealthService defines the interface for managing health check status.
 // This interface allows setting the serving status for different service names.
