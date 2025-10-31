@@ -50,7 +50,7 @@ func TestExtractAZFromPodNodeSelector(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := client.extractAZ(ctx, tt.pod)
 			if err != nil {
-				t.Errorf("Unexpected error: %v", err)
+				t.Fatalf("Unexpected error: %v", err)
 			}
 			if result != tt.expected {
 				t.Errorf("Expected %s, got %s", tt.expected, result)

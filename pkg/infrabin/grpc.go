@@ -114,13 +114,13 @@ func NewGRPCServer() (*GRPCServer, error) {
 	if viper.GetBool("enableCrossAZEndpoint") {
 		client, err := k8s.NewInClusterClient()
 		if err != nil {
-			log.Printf("WARNING: Failed to initialize Kubernetes client: %v", err)
-			log.Printf("CrossAZ endpoint will not be available")
-		} else {
-			adapter := k8s.NewClientAdapter(client)
-			k8sClient = &k8sClientWrapper{adapter: adapter}
-			log.Printf("Kubernetes client initialized for CrossAZ endpoint")
+			// If the endpoint is explicitly enabled but we can't initialize the client,
+			// fail fast rather than silently running with a broken endpoint.
+			return nil, fmt.Errorf("failed to initialize Kubernetes client for CrossAZ endpoint: %w", err)
 		}
+		adapter := k8s.NewClientAdapter(client)
+		k8sClient = &k8sClientWrapper{adapter: adapter}
+		log.Printf("Kubernetes client initialized for CrossAZ endpoint")
 	}
 
 	infrabinService := &InfrabinService{

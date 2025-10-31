@@ -24,7 +24,7 @@ func (s *InfrabinService) CrossAZ(ctx context.Context, _ *Empty) (*CrossAZRespon
 
 	// Check if Kubernetes client is available
 	if s.K8sClient == nil {
-		return nil, status.Error(codes.Internal, "Kubernetes client not initialized")
+		return nil, status.Error(codes.Internal, "kubernetes client not initialized")
 	}
 
 	// Get current pod's AZ from environment variable
@@ -47,8 +47,8 @@ func (s *InfrabinService) CrossAZ(ctx context.Context, _ *Empty) (*CrossAZRespon
 		return nil, status.Errorf(codes.Internal, "failed to discover pods: %v", err)
 	}
 
-	// Group pods by AZ and filter out current pod
-	discoveredPods := groupPodsByAZ(pods, currentPodName)
+	// Group pods by AZ
+	discoveredPods := groupPodsByAZ(pods)
 
 	// Get pods in different AZs for testing
 	crossAZPods := filterCrossAZPods(pods, currentAZ, currentPodName)
@@ -69,7 +69,7 @@ func (s *InfrabinService) CrossAZ(ctx context.Context, _ *Empty) (*CrossAZRespon
 }
 
 // groupPodsByAZ groups pods by their availability zone.
-func groupPodsByAZ(pods []K8sPodInfo, currentPodName string) map[string]*PodList {
+func groupPodsByAZ(pods []K8sPodInfo) map[string]*PodList {
 	result := make(map[string]*PodList)
 
 	for _, pod := range pods {
@@ -123,6 +123,11 @@ func (s *InfrabinService) testCrossAZConnectivity(ctx context.Context, pods []K8
 		return []*CrossAZTest{}
 	}
 
+	// Check context once before starting any goroutines
+	if ctx.Err() != nil {
+		return []*CrossAZTest{}
+	}
+
 	results := make([]*CrossAZTest, len(pods))
 	var wg sync.WaitGroup
 
@@ -130,6 +135,8 @@ func (s *InfrabinService) testCrossAZConnectivity(ctx context.Context, pods []K8
 		wg.Add(1)
 		go func(index int, podInfo K8sPodInfo) {
 			defer wg.Done()
+			// The HTTP client respects ctx timeout, providing protection even if ctx is cancelled.
+			// We don't need to check ctx.Err() here since NewRequestWithContext propagates cancellation.
 			results[index] = s.testPodConnectivity(ctx, podInfo, sourceAZ, sourcePod)
 		}(i, pod)
 	}
@@ -141,7 +148,8 @@ func (s *InfrabinService) testCrossAZConnectivity(ctx context.Context, pods []K8
 // testPodConnectivity tests connectivity to a single pod.
 func (s *InfrabinService) testPodConnectivity(ctx context.Context, pod K8sPodInfo, sourceAZ, sourcePod string) *CrossAZTest {
 	timeout := viper.GetDuration("crossAZTimeout")
-	testURL := fmt.Sprintf("http://%s:8888/", pod.IP)
+	targetPort := viper.GetUint("crossAZTargetPort")
+	testURL := fmt.Sprintf("http://%s:%d/", pod.IP, targetPort)
 
 	// Create HTTP client with timeout
 	client := &http.Client{
@@ -187,6 +195,10 @@ func (s *InfrabinService) testPodConnectivity(ctx context.Context, pod K8sPodInf
 		result = "failure"
 	}
 	crossAZTestsTotal.WithLabelValues(sourceAZ, pod.AvailabilityZone, result).Inc()
+	// Note: Using pod names as labels creates high cardinality (N*M combinations for N and M pods).
+	// In a cluster with 100 pods, this creates ~10,000 metric series. This is intentional for
+	// detailed debugging and is manageable at typical infrabin scale (< 50 pods per namespace).
+	// For very large deployments (>100 pods), consider using AZ-only labels and relying on logs.
 	crossAZTestDuration.WithLabelValues(sourceAZ, sourcePod, pod.AvailabilityZone, pod.Name).Observe(float64(duration.Milliseconds()))
 
 	return &CrossAZTest{

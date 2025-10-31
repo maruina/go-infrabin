@@ -385,6 +385,15 @@ func (s *InfrabinService) testHTTPConnection(ctx context.Context, target, scheme
 		return nil, status.Errorf(codes.InvalidArgument, "target must not be empty")
 	}
 
+	// Check if context is already cancelled before expensive operations
+	if err := ctx.Err(); err != nil {
+		return &EgressResponse{
+			Success: false,
+			Error:   fmt.Sprintf("request cancelled: %v", err),
+			Target:  target,
+		}, nil
+	}
+
 	// Parse target to extract host:port and optional DNS server
 	hostPort, dnsServer := parseTargetAndDNS(target)
 
@@ -409,15 +418,6 @@ func (s *InfrabinService) testHTTPConnection(ctx context.Context, target, scheme
 
 	// Get timeout from configuration
 	timeout := viper.GetDuration("egressTimeout")
-
-	// Check if context is already cancelled before proceeding with expensive operations
-	if err := ctx.Err(); err != nil {
-		return &EgressResponse{
-			Success: false,
-			Error:   fmt.Sprintf("request cancelled: %v", err),
-			Target:  hostPort,
-		}, nil
-	}
 
 	// Create HTTP transport with appropriate TLS configuration
 	// Note: We create a new transport for each request to support custom DNS servers.

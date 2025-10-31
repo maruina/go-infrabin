@@ -2,6 +2,7 @@ package infrabin
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -35,6 +36,8 @@ const (
 	EnableCrossAZEndpoint = false
 	CrossAZTimeout        = 3 * time.Second
 	CrossAZLabelSelector  = "app.kubernetes.io/name=go-infrabin"
+	// CrossAZTargetPort is the HTTP port to use when testing connectivity to discovered pods
+	CrossAZTargetPort = 8888
 )
 
 var (
@@ -100,10 +103,12 @@ func ReadConfiguration() error {
 	viper.SetDefault("enableCrossAZEndpoint", EnableCrossAZEndpoint)
 	viper.SetDefault("crossAZTimeout", CrossAZTimeout)
 	viper.SetDefault("crossAZLabelSelector", CrossAZLabelSelector)
+	viper.SetDefault("crossAZTargetPort", CrossAZTargetPort)
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Will just use the default configuration.
+			log.Printf("No config file found, using defaults")
 		} else {
 			// Config file was found but another error was produced
 			return fmt.Errorf("fatal error config file: %w", err)

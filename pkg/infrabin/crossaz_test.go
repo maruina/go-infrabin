@@ -8,10 +8,9 @@ import (
 
 func TestGroupPodsByAZ(t *testing.T) {
 	tests := []struct {
-		name           string
-		pods           []K8sPodInfo
-		currentPodName string
-		expected       map[string]*PodList
+		name     string
+		pods     []K8sPodInfo
+		expected map[string]*PodList
 	}{
 		{
 			name: "groups pods by availability zone",
@@ -21,7 +20,6 @@ func TestGroupPodsByAZ(t *testing.T) {
 				{Name: "pod-3", IP: "10.0.2.1", AvailabilityZone: "us-east-1b"},
 				{Name: "pod-4", IP: "10.0.3.1", AvailabilityZone: "us-east-1c"},
 			},
-			currentPodName: "pod-1",
 			expected: map[string]*PodList{
 				"us-east-1a": {PodNames: []string{"pod-1", "pod-2"}},
 				"us-east-1b": {PodNames: []string{"pod-3"}},
@@ -34,25 +32,22 @@ func TestGroupPodsByAZ(t *testing.T) {
 				{Name: "pod-1", IP: "10.0.1.1", AvailabilityZone: "us-east-1a"},
 				{Name: "pod-2", IP: "10.0.1.2", AvailabilityZone: ""},
 			},
-			currentPodName: "pod-1",
 			expected: map[string]*PodList{
 				"us-east-1a": {PodNames: []string{"pod-1"}},
 				"unknown":    {PodNames: []string{"pod-2"}},
 			},
 		},
 		{
-			name:           "handles empty pod list",
-			pods:           []K8sPodInfo{},
-			currentPodName: "pod-1",
-			expected:       map[string]*PodList{},
+			name:     "handles empty pod list",
+			pods:     []K8sPodInfo{},
+			expected: map[string]*PodList{},
 		},
 		{
-			name: "includes current pod in grouping",
+			name: "includes all pods in grouping",
 			pods: []K8sPodInfo{
 				{Name: "pod-1", IP: "10.0.1.1", AvailabilityZone: "us-east-1a"},
 				{Name: "pod-2", IP: "10.0.2.1", AvailabilityZone: "us-east-1b"},
 			},
-			currentPodName: "pod-1",
 			expected: map[string]*PodList{
 				"us-east-1a": {PodNames: []string{"pod-1"}},
 				"us-east-1b": {PodNames: []string{"pod-2"}},
@@ -62,7 +57,7 @@ func TestGroupPodsByAZ(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := groupPodsByAZ(tt.pods, tt.currentPodName)
+			result := groupPodsByAZ(tt.pods)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

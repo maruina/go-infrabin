@@ -42,6 +42,7 @@ var (
 				"enableCrossAZEndpoint": "enable-crossaz-endpoint",
 				"crossAZTimeout":        "crossaz-timeout",
 				"crossAZLabelSelector":  "crossaz-label-selector",
+				"crossAZTargetPort":     "crossaz-target-port",
 			} {
 				if err := viper.BindPFlag(viperKey, cmd.Flags().Lookup(cobraFlag)); err != nil {
 					return err
@@ -87,10 +88,13 @@ func init() {
 	rootCmd.Flags().Bool("enable-crossaz-endpoint", infrabin.EnableCrossAZEndpoint, "Enable the /crossaz endpoint for cross-AZ connectivity testing")
 	rootCmd.Flags().Duration("crossaz-timeout", infrabin.CrossAZTimeout, "Timeout for cross-AZ connectivity tests")
 	rootCmd.Flags().String("crossaz-label-selector", infrabin.CrossAZLabelSelector, "Label selector for discovering go-infrabin pods")
+	rootCmd.Flags().Uint("crossaz-target-port", infrabin.CrossAZTargetPort, "HTTP port to use for cross-AZ connectivity tests")
 }
 
 func run(cmd *cobra.Command, args []string) {
-	// Create a channel to catch signals
+	// Create a buffered channel to catch signals.
+	// Buffer of 1 ensures we don't miss a signal if it arrives before we start waiting on it,
+	// since signal.Notify only queues one pending signal per type.
 	finish := make(chan os.Signal, 1)
 	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
 	// and SIGTERM (used in docker and kubernetes)

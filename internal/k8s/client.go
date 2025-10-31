@@ -3,7 +3,9 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +55,8 @@ func getCurrentNamespace() (string, error) {
 		return "", fmt.Errorf("failed to read namespace file: %w", err)
 	}
 
-	return string(data), nil
+	// Trim whitespace including trailing newline that's typically present in the file
+	return strings.TrimSpace(string(data)), nil
 }
 
 // PodInfo contains essential information about a discovered pod.
@@ -92,7 +95,7 @@ func (c *Client) DiscoverPods(ctx context.Context, labelSelector string) ([]PodI
 		az, err := c.extractAZ(ctx, &pod)
 		if err != nil {
 			// Log error but continue with "unknown" AZ
-			fmt.Printf("WARNING: failed to extract AZ for pod %s: %v\n", pod.Name, err)
+			log.Printf("WARNING: failed to extract AZ for pod %s: %v", pod.Name, err)
 			az = "unknown"
 		}
 
