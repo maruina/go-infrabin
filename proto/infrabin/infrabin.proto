@@ -169,6 +169,15 @@ service Infrabin {
         };
     }
 
+    // CrossAZ performs cross-availability-zone connectivity tests.
+    // Discovers all go-infrabin pods in different AZs and tests connectivity to them.
+    // Requires --enable-crossaz-endpoint flag and appropriate RBAC permissions.
+    rpc CrossAZ(Empty) returns (CrossAZResponse) {
+        option (google.api.http) = {
+            get: "/crossaz"
+        };
+    }
+
 }
 
 
@@ -352,4 +361,55 @@ message SetHealthStatusRequest {
 	// "pass" sets the service as healthy/ready.
 	// "fail" sets the service as unhealthy/not ready.
 	string status = 1;
+}
+
+// CrossAZResponse contains the results of cross-AZ connectivity tests.
+message CrossAZResponse {
+	// current_az is the availability zone of the pod handling this request.
+	string current_az = 1;
+	// current_pod is the name of the pod handling this request.
+	string current_pod = 2;
+	// discovered_pods maps availability zones to lists of pod names.
+	map<string, PodList> discovered_pods = 3;
+	// cross_az_tests contains connectivity test results for pods in other AZs.
+	repeated CrossAZTest cross_az_tests = 4;
+	// summary contains aggregate statistics about the tests.
+	CrossAZSummary summary = 5;
+}
+
+// PodList contains a list of pod names.
+message PodList {
+	repeated string pod_names = 1;
+}
+
+// CrossAZTest represents a single connectivity test to a pod in another AZ.
+message CrossAZTest {
+	// pod_name is the name of the target pod.
+	string pod_name = 1;
+	// pod_ip is the IP address of the target pod.
+	string pod_ip = 2;
+	// az is the availability zone of the target pod.
+	string az = 3;
+	// success indicates whether connectivity was successful.
+	bool success = 4;
+	// status_code is the HTTP status code returned (0 if connection failed).
+	int32 status_code = 5;
+	// duration_ms is the time taken for the request in milliseconds.
+	int64 duration_ms = 6;
+	// error contains error details if the test failed.
+	string error = 7;
+}
+
+// CrossAZSummary contains aggregate statistics about cross-AZ tests.
+message CrossAZSummary {
+	// total_pods is the total number of pods discovered.
+	int32 total_pods = 1;
+	// total_azs is the number of unique availability zones.
+	int32 total_azs = 2;
+	// cross_az_pods_tested is the number of pods tested in other AZs.
+	int32 cross_az_pods_tested = 3;
+	// successful_tests is the number of successful connectivity tests.
+	int32 successful_tests = 4;
+	// failed_tests is the number of failed connectivity tests.
+	int32 failed_tests = 5;
 }

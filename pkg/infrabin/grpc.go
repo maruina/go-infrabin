@@ -8,12 +8,39 @@ import (
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/maruina/go-infrabin/internal/aws"
+	"github.com/maruina/go-infrabin/internal/k8s"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 )
+
+// k8sClientWrapper wraps the internal k8s.ClientAdapter and implements the K8sClient interface.
+// It converts between internal k8s.PodInfo and infrabin.K8sPodInfo types.
+type k8sClientWrapper struct {
+	adapter *k8s.ClientAdapter
+}
+
+// DiscoverPods implements the K8sClient interface by converting k8s.PodInfo to K8sPodInfo.
+func (w *k8sClientWrapper) DiscoverPods(ctx context.Context, labelSelector string) ([]K8sPodInfo, error) {
+	pods, err := w.adapter.GetPods(ctx, labelSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert internal PodInfo to K8sPodInfo
+	result := make([]K8sPodInfo, len(pods))
+	for i, pod := range pods {
+		result[i] = K8sPodInfo{
+			Name:             pod.Name,
+			IP:               pod.IP,
+			AvailabilityZone: pod.AvailabilityZone,
+		}
+	}
+
+	return result, nil
+}
 
 // GRPCServer wraps the gRPC server and implements infrabin.Infrabin
 type GRPCServer struct {
@@ -81,9 +108,25 @@ func NewGRPCServer() (*GRPCServer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create AWS STS client: %w", err)
 	}
+
+	// Initialize Kubernetes client if crossaz endpoint is enabled
+	var k8sClient K8sClient
+	if viper.GetBool("enableCrossAZEndpoint") {
+		client, err := k8s.NewInClusterClient()
+		if err != nil {
+			log.Printf("WARNING: Failed to initialize Kubernetes client: %v", err)
+			log.Printf("CrossAZ endpoint will not be available")
+		} else {
+			adapter := k8s.NewClientAdapter(client)
+			k8sClient = &k8sClientWrapper{adapter: adapter}
+			log.Printf("Kubernetes client initialized for CrossAZ endpoint")
+		}
+	}
+
 	infrabinService := &InfrabinService{
 		STSClient:     stsClient,
 		HealthService: healthServer,
+		K8sClient:     k8sClient,
 	}
 
 	// Register gRPC services on the grpc server

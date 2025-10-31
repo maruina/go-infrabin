@@ -39,6 +39,9 @@ var (
 				"httpReadHeaderTimeout": "http-read-header-timeout",
 				"intermittentErrors":    "intermittent-errors",
 				"egressTimeout":         "egress-timeout",
+				"enableCrossAZEndpoint": "enable-crossaz-endpoint",
+				"crossAZTimeout":        "crossaz-timeout",
+				"crossAZLabelSelector":  "crossaz-label-selector",
 			} {
 				if err := viper.BindPFlag(viperKey, cmd.Flags().Lookup(cobraFlag)); err != nil {
 					return err
@@ -81,6 +84,9 @@ func init() {
 	rootCmd.Flags().Duration("http-read-header-timeout", infrabin.HTTPReadHeaderTimeout, "HTTP read header timeout")
 	rootCmd.Flags().Int32("intermittent-errors", infrabin.IntermittentErrors, "Consecutive 503 errors before returning 200 for the /intermittent endpoint")
 	rootCmd.Flags().Duration("egress-timeout", infrabin.EgressTimeout, "Timeout for egress HTTP/HTTPS requests")
+	rootCmd.Flags().Bool("enable-crossaz-endpoint", infrabin.EnableCrossAZEndpoint, "Enable the /crossaz endpoint for cross-AZ connectivity testing")
+	rootCmd.Flags().Duration("crossaz-timeout", infrabin.CrossAZTimeout, "Timeout for cross-AZ connectivity tests")
+	rootCmd.Flags().String("crossaz-label-selector", infrabin.CrossAZLabelSelector, "Label selector for discovering go-infrabin pods")
 }
 
 func run(cmd *cobra.Command, args []string) {

@@ -27,6 +27,32 @@ var (
 		},
 		[]string{"method", "handler"},
 	)
+
+	// CrossAZ metrics
+	crossAZTestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "crossaz_tests_total",
+			Help: "Total number of cross-AZ connectivity tests performed",
+		},
+		[]string{"source_az", "target_az", "result"},
+	)
+
+	crossAZTestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "crossaz_test_duration_milliseconds",
+			Help:    "Duration of cross-AZ connectivity tests in milliseconds",
+			Buckets: prometheus.ExponentialBuckets(10, 2, 10), // 10ms to ~10s
+		},
+		[]string{"source_az", "source_pod", "target_az", "destination_pod"},
+	)
+
+	crossAZPodsDiscovered = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "crossaz_pods_discovered",
+			Help: "Number of pods discovered per availability zone",
+		},
+		[]string{"az"},
+	)
 )
 
 // metricsResponseWriter wraps http.ResponseWriter to capture status code
@@ -96,6 +122,8 @@ func normalizeRoute(path string) string {
 			return "any"
 		case "bytes":
 			return "bytes"
+		case "crossaz":
+			return "crossaz"
 		case "aws":
 			// Handle AWS sub-paths
 			if len(parts) >= 2 {

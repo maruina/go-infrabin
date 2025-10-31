@@ -30,6 +30,11 @@ const (
 	// Set to 3 seconds to balance between detecting connection issues quickly and
 	// allowing sufficient time for slower networks or high-latency connections.
 	EgressTimeout = 3 * time.Second
+
+	// CrossAZ endpoint configuration
+	EnableCrossAZEndpoint = false
+	CrossAZTimeout        = 3 * time.Second
+	CrossAZLabelSelector  = "app.kubernetes.io/name=go-infrabin"
 )
 
 var (
@@ -90,6 +95,11 @@ func ReadConfiguration() error {
 	viper.SetDefault("httpReadTimeout", HTTPReadTimeout)
 	viper.SetDefault("httpIdleTimeout", HTTPIdleTimeout)
 	viper.SetDefault("httpReadHeaderTimeout", HTTPReadHeaderTimeout)
+
+	// CrossAZ endpoint configuration
+	viper.SetDefault("enableCrossAZEndpoint", EnableCrossAZEndpoint)
+	viper.SetDefault("crossAZTimeout", CrossAZTimeout)
+	viper.SetDefault("crossAZLabelSelector", CrossAZLabelSelector)
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {

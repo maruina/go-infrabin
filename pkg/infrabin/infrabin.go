@@ -37,6 +37,21 @@ type InfrabinService struct {
 	STSClient                 aws.STSClient
 	HealthService             HealthService
 	intermittentErrorsCounter atomic.Int32
+	K8sClient                 K8sClient // Optional: nil if crossaz endpoint disabled
+}
+
+// K8sClient defines the interface for Kubernetes operations needed by CrossAZ.
+// This interface allows for easier testing and mocking.
+type K8sClient interface {
+	DiscoverPods(ctx context.Context, labelSelector string) ([]K8sPodInfo, error)
+}
+
+// K8sPodInfo contains essential information about a discovered pod.
+// This is a local type to avoid direct dependency on internal/k8s in the interface.
+type K8sPodInfo struct {
+	Name             string
+	IP               string
+	AvailabilityZone string
 }
 
 // HealthService defines the interface for managing health check status.
