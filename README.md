@@ -248,6 +248,11 @@ rbac:
     enabled: true
 ```
 
+When `enableCrossAZEndpoint` is true, the Helm chart automatically:
+- Sets replica count to 3 (unless autoscaling is enabled)
+- Adds topology spread constraints to distribute pods across availability zones (maxSkew: 1)
+- Configures Downward API environment variables (POD_NAME, AVAILABILITY_ZONE)
+
 The endpoint requires both namespace-scoped (pods) and cluster-scoped (nodes) RBAC permissions to extract availability zone information from node labels.
 
 For detailed request/response schemas and field descriptions, see `/openapi.json`.

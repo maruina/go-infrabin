@@ -2,6 +2,8 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# Default replica count. When args.enableCrossAZEndpoint is true, replica count is
+# capped at min(replicaCount, 3) to work well with topology spread constraints.
 replicaCount: 1
 
 image:

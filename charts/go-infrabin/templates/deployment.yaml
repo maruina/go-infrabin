@@ -6,7 +6,11 @@ metadata:
     {{- include "go-infrabin.labels" . | nindent 4 }}
 spec:
 {{- if not .Values.autoscaling.enabled }}
+  {{- if .Values.args.enableCrossAZEndpoint }}
+  replicas: {{ min .Values.replicaCount 3 }}
+  {{- else }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
 {{- end }}
   selector:
     matchLabels:
@@ -100,4 +104,13 @@ spec:
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.args.enableCrossAZEndpoint }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              {{- include "go-infrabin.selectorLabels" . | nindent 14 }}
       {{- end }}
