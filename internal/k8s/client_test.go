@@ -111,12 +111,44 @@ func TestExtractAZNoNodeName(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	result, err := client.extractAZ(ctx, pod)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	_, err := client.extractAZ(ctx, pod)
+	if err == nil {
+		t.Fatal("Expected error for pod with no node assigned, got nil")
 	}
-	if result != "unknown" {
-		t.Errorf("Expected 'unknown', got %s", result)
+}
+
+func TestExtractAZNodeWithoutZoneLabel(t *testing.T) {
+	// Create a fake node without AZ label
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "test-node",
+			Labels: map[string]string{
+				// No zone label
+				"kubernetes.io/hostname": "test-node",
+			},
+		},
+	}
+
+	// Create fake clientset with the node
+	fakeClient := fake.NewSimpleClientset(node)
+
+	client := &Client{
+		clientset: fakeClient,
+		namespace: "default",
+	}
+
+	// Create pod without node selector but with node name
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			NodeName:     "test-node",
+			NodeSelector: map[string]string{},
+		},
+	}
+
+	ctx := context.Background()
+	_, err := client.extractAZ(ctx, pod)
+	if err == nil {
+		t.Fatal("Expected error for node without zone label, got nil")
 	}
 }
 

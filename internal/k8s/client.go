@@ -3,7 +3,6 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -94,9 +93,10 @@ func (c *Client) DiscoverPods(ctx context.Context, labelSelector string) ([]PodI
 		// Extract AZ - first from pod, then from node
 		az, err := c.extractAZ(ctx, &pod)
 		if err != nil {
-			// Log error but continue with "unknown" AZ
-			log.Printf("WARNING: failed to extract AZ for pod %s: %v", pod.Name, err)
-			az = "unknown"
+			return nil, fmt.Errorf("failed to extract AZ for pod %s: %w", pod.Name, err)
+		}
+		if az == "unknown" {
+			return nil, fmt.Errorf("pod %s has unknown availability zone (no zone label on pod or node %s)", pod.Name, pod.Spec.NodeName)
 		}
 
 		result = append(result, PodInfo{
@@ -127,7 +127,7 @@ func (c *Client) extractAZ(ctx context.Context, pod *corev1.Pod) (string, error)
 
 	// If not in node selector, query the node for AZ labels
 	if pod.Spec.NodeName == "" {
-		return "unknown", nil
+		return "", fmt.Errorf("pod has no node assigned")
 	}
 
 	node, err := c.clientset.CoreV1().Nodes().Get(ctx, pod.Spec.NodeName, metav1.GetOptions{})
@@ -146,7 +146,7 @@ func (c *Client) extractAZ(ctx context.Context, pod *corev1.Pod) (string, error)
 	}
 
 	// Could not determine AZ from pod or node
-	return "unknown", nil
+	return "", fmt.Errorf("no availability zone label found on node %s (expected topology.kubernetes.io/zone or failure-domain.beta.kubernetes.io/zone)", pod.Spec.NodeName)
 }
 
 // ClientAdapter wraps Client and provides a method that returns PodInfo.
