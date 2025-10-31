@@ -22,8 +22,11 @@ See the [README](./chart/go-infrabin/README.md).
 ## Command line flags
 
 * `--aws-metadata-endpoint`: AWS Metadata Endpoint (default `http://169.254.169.254/latest/meta-data/`)
+* `--crossaz-label-selector`: Label selector for discovering pods in `/crossaz` endpoint (default `"app.kubernetes.io/name=go-infrabin"`)
+* `--crossaz-timeout`: Timeout for cross-AZ connectivity tests (default `3s`)
 * `--drain-timeout`: Drain timeout (default `15s`)
 * `--egress-timeout`: Timeout for egress HTTP/HTTPS requests (default `3s`)
+* `--enable-crossaz-endpoint`: When enabled allows `/crossaz` endpoint (requires Kubernetes RBAC permissions)
 * `--enable-proxy-endpoint`: When enabled allows `/proxy` and `/aws` endpoints
 * `--proxy-allow-regexp`: Regular expression to allow URL called by the `/proxy` endpoint (default `".*"`)
 * `--intermittent-errors`: Number of consecutive 503 errors before returning 200 when calling the `/intermittent` endpoint (default `2`)
@@ -48,12 +51,13 @@ See the [README](./chart/go-infrabin/README.md).
 
 The following environment variables are used to populate the Kubernetes information in the root endpoint response:
 
-* `POD_NAME` or `K8S_POD_NAME`: Kubernetes pod name
+* `POD_NAME` or `K8S_POD_NAME`: Kubernetes pod name (also required for `/crossaz` endpoint)
 * `POD_NAMESPACE` or `K8S_NAMESPACE`: Kubernetes namespace
 * `POD_IP` or `K8S_POD_IP`: Pod IP address
 * `NODE_NAME` or `K8S_NODE_NAME`: Kubernetes node name
 * `CLUSTER_NAME` or `K8S_CLUSTER_NAME`: Kubernetes cluster name
 * `REGION`, `AWS_REGION`, or `FUNCTION_REGION`: Cloud region
+* `AVAILABILITY_ZONE`: Availability zone (required for `/crossaz` endpoint)
 
 ## API Documentation
 
@@ -92,6 +96,7 @@ The service exposes both gRPC (`infrabin.Infrabin`) and REST endpoints:
 | `GET /egress/https/insecure/{target}` | Test HTTPS connectivity without certificate verification |
 | `POST /healthcheck/liveness/{status}` | Set liveness probe status (`pass` or `fail`) |
 | `POST /healthcheck/readiness/{status}` | Set readiness probe status (`pass` or `fail`) |
+| `GET /crossaz` | Test cross-availability-zone connectivity (requires `--enable-crossaz-endpoint`) |
 
 #### Egress Endpoints
 
@@ -193,6 +198,57 @@ livenessProbe:
 ```
 
 By default, both liveness and readiness are set to healthy (SERVING) on startup. Use the control endpoints to simulate probe failures and test your orchestration behavior.
+
+#### CrossAZ Endpoint
+
+The `/crossaz` endpoint helps test cross-availability-zone connectivity in Kubernetes clusters. It automatically discovers pods running in different availability zones and tests HTTP connectivity between them, which is useful for:
+- Identifying cross-AZ network misconfigurations
+- Monitoring cross-AZ connectivity health
+- Validating network policies across zones
+- Testing zone-aware load balancing
+
+**Prerequisites**:
+1. Enable the endpoint with `--enable-crossaz-endpoint`
+2. Configure RBAC permissions (see Helm chart configuration below)
+3. Set the `AVAILABILITY_ZONE` and `POD_NAME` environment variables via Kubernetes Downward API
+
+**Usage**:
+```bash
+# Test cross-AZ connectivity
+curl http://localhost:8888/crossaz
+```
+
+**Response includes**:
+- Current pod's AZ and name
+- Discovered pods grouped by availability zone
+- Connectivity test results for each cross-AZ pod
+- Summary statistics (total pods, AZs, successful/failed tests)
+
+**Prometheus Metrics**:
+```
+# Total number of cross-AZ connectivity tests
+crossaz_tests_total{source_az="us-east-1a",target_az="us-east-1b",result="success"}
+
+# Duration of connectivity tests in milliseconds
+crossaz_test_duration_milliseconds{source_az="us-east-1a",source_pod="pod-1",target_az="us-east-1b",destination_pod="pod-2"}
+
+# Number of pods discovered per availability zone
+crossaz_pods_discovered{az="us-east-1a"}
+```
+
+**Helm Chart Configuration**:
+```yaml
+args:
+  enableCrossAZEndpoint: true
+  crossAZTimeout: 3s
+  crossAZLabelSelector: "app.kubernetes.io/name=go-infrabin"
+
+rbac:
+  crossAZ:
+    enabled: true
+```
+
+The endpoint requires both namespace-scoped (pods) and cluster-scoped (nodes) RBAC permissions to extract availability zone information from node labels.
 
 For detailed request/response schemas and field descriptions, see `/openapi.json`.
 

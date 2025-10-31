@@ -22,6 +22,10 @@ args:
   httpReadTimeout: 60s
   httpIdleTimeout: 15s
   httpReadHeaderTimeout: 15s
+  # CrossAZ endpoint configuration
+  enableCrossAZEndpoint: false
+  crossAZTimeout: 3s
+  crossAZLabelSelector: "app.kubernetes.io/name=go-infrabin"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -97,3 +101,7 @@ extraEnv: []
 rbac:
   # Specifies whether PSP resources should be created
   pspEnabled: false
+  # Specifies whether RBAC resources for CrossAZ endpoint should be created
+  # Required when args.enableCrossAZEndpoint is true
+  crossAZ:
+    enabled: false

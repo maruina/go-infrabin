@@ -40,6 +40,11 @@ spec:
             {{- if .Values.args.enableProxyEndpoint }}
             - --enable-proxy-endpoint=true
             {{- end }}
+            {{- if .Values.args.enableCrossAZEndpoint }}
+            - --enable-crossaz-endpoint=true
+            - --crossaz-timeout={{ .Values.args.crossAZTimeout }}
+            - --crossaz-label-selector={{ .Values.args.crossAZLabelSelector }}
+            {{- end }}
             - --aws-metadata-endpoint={{ .Values.args.aWSMetadataEndpoint }}
             - --drain-timeout={{ .Values.args.drainTimeout }}
             - --max-delay={{ .Values.args.maxDelay }}
@@ -68,10 +73,22 @@ spec:
             initialDelaySeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.extraEnv }}
           env:
+            {{- if .Values.args.enableCrossAZEndpoint }}
+            # Downward API: Pod name for CrossAZ endpoint
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # Downward API: Availability zone from node label
+            - name: AVAILABILITY_ZONE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['topology.kubernetes.io/zone']
+            {{- end }}
+            {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
