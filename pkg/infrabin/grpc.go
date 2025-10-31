@@ -83,13 +83,19 @@ func NewGRPCServer() (*GRPCServer, error) {
 		return nil, fmt.Errorf("failed to create AWS STS client: %w", err)
 	}
 
-	// Initialize Kubernetes client if crossaz endpoint is enabled
+	// Initialize Kubernetes client if crossaz endpoint is enabled.
+	// We fail fast if initialization fails because the endpoint was explicitly enabled,
+	// indicating it's a required feature. This prevents the service from running in a
+	// degraded state where the CrossAZ endpoint would return errors to all callers.
+	// If you want graceful degradation, leave enableCrossAZEndpoint disabled and enable
+	// it only after verifying RBAC is properly configured.
 	var k8sClient K8sClient
 	if viper.GetBool("enableCrossAZEndpoint") {
 		client, err := k8s.NewInClusterClient()
 		if err != nil {
-			// If the endpoint is explicitly enabled but we can't initialize the client,
-			// fail fast rather than silently running with a broken endpoint.
+			// Fail fast: if CrossAZ is explicitly enabled but client init fails,
+			// this likely indicates misconfigured RBAC or service account.
+			// Failing here prevents silent degradation and surfaces the issue immediately.
 			return nil, fmt.Errorf("failed to initialize Kubernetes client for CrossAZ endpoint: %w", err)
 		}
 		k8sClient = client

@@ -1,0 +1,3 @@
+a5f8af5347ccec3b64fedf1bcc2ecc483da67c40ac25170b5fd35c00e36ed909  go-infrabin_3.7.1-SNAPSHOT-4ca3fe8_darwin_amd64.tar.gz
+d2675f03ce86cd587b6985b89da7990c097bbcc6f0de6e274bbb87ae12760b0e  go-infrabin_3.7.1-SNAPSHOT-4ca3fe8_linux_amd64.tar.gz
+7593068ea386a3d13b55db5c3476cbbb94d41b32eeee50a4437452c19a4fc2aa  go-infrabin_3.7.1-SNAPSHOT-4ca3fe8_windows_amd64.tar.gz

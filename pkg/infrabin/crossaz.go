@@ -135,8 +135,12 @@ func (s *InfrabinService) testCrossAZConnectivity(ctx context.Context, pods []K8
 		wg.Add(1)
 		go func(index int, podInfo K8sPodInfo) {
 			defer wg.Done()
-			// The HTTP client respects ctx timeout, providing protection even if ctx is cancelled.
-			// We don't need to check ctx.Err() here since NewRequestWithContext propagates cancellation.
+			// Context cancellation is handled automatically by http.NewRequestWithContext in testPodConnectivity.
+			// When ctx is cancelled, the HTTP request returns immediately with context.Canceled error.
+			// We don't need explicit select/ctx.Done() here because:
+			// 1. The HTTP client already does this internally
+			// 2. Adding redundant checks would complicate the code without benefit
+			// 3. The timeout is short (3s default), so worst case is 3s delay on cancellation
 			results[index] = s.testPodConnectivity(ctx, podInfo, sourceAZ, sourcePod)
 		}(i, pod)
 	}
@@ -179,8 +183,10 @@ func (s *InfrabinService) testPodConnectivity(ctx context.Context, pod K8sPodInf
 	errorMsg := ""
 
 	if err != nil {
+		// Request failed - no response body to close
 		errorMsg = err.Error()
 	} else {
+		// Response received - ensure body is closed to prevent resource leak
 		defer resp.Body.Close()
 		statusCode = int32(resp.StatusCode)
 		success = resp.StatusCode >= 200 && resp.StatusCode < 300
@@ -195,10 +201,22 @@ func (s *InfrabinService) testPodConnectivity(ctx context.Context, pod K8sPodInf
 		result = "failure"
 	}
 	crossAZTestsTotal.WithLabelValues(sourceAZ, pod.AvailabilityZone, result).Inc()
-	// Note: Using pod names as labels creates high cardinality (N*M combinations for N and M pods).
-	// In a cluster with 100 pods, this creates ~10,000 metric series. This is intentional for
-	// detailed debugging and is manageable at typical infrabin scale (< 50 pods per namespace).
-	// For very large deployments (>100 pods), consider using AZ-only labels and relying on logs.
+
+	// IMPORTANT: High Cardinality Metric Warning
+	// The crossAZTestDuration metric uses pod names as labels (source_pod, destination_pod).
+	// This creates N*M metric series for N source pods and M destination pods in different AZs.
+	// Example cardinalities:
+	//   - 10 pods across 3 AZs: ~100 series (manageable)
+	//   - 50 pods across 3 AZs: ~2,500 series (acceptable)
+	//   - 100 pods across 3 AZs: ~10,000 series (warning threshold)
+	//   - 500 pods across 3 AZs: ~250,000 series (will exhaust Prometheus memory)
+	//
+	// This high cardinality is intentional for detailed debugging at small scale (<50 pods).
+	// For large deployments, consider one of:
+	//   1. Use crossAZTestsTotal (AZ-level only, low cardinality) for monitoring
+	//   2. Limit replica count when CrossAZ endpoint is enabled
+	//   3. Query logs instead of metrics for per-pod diagnostics
+	//   4. Implement a separate low-cardinality metric build
 	crossAZTestDuration.WithLabelValues(sourceAZ, sourcePod, pod.AvailabilityZone, pod.Name).Observe(float64(duration.Milliseconds()))
 
 	return &CrossAZTest{

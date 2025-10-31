@@ -77,6 +77,12 @@ func (c *Client) DiscoverPods(ctx context.Context, labelSelector string) ([]PodI
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
 
+	// Build a cache of node labels to avoid O(pods) API calls when we only have O(nodes) nodes.
+	// This reduces API calls from N (number of pods) to M (number of unique nodes) + 1 (pod list).
+	// For example, 100 pods across 3 nodes: 101 API calls instead of 101 (the pods list call
+	// is unavoidable, but we reduce node Gets from 100 to 3).
+	nodeCache := make(map[string]string) // nodeName -> availabilityZone
+
 	// Extract pod information
 	var result []PodInfo
 	for _, pod := range pods.Items {
@@ -90,8 +96,11 @@ func (c *Client) DiscoverPods(ctx context.Context, labelSelector string) ([]PodI
 			continue
 		}
 
-		// Extract AZ - first from pod, then from node
-		az, err := c.extractAZ(ctx, &pod)
+		// Extract AZ - first from pod, then from node (with caching).
+		// We fail fast if any pod has an unknown AZ because cross-AZ connectivity
+		// tests are meaningless without zone information. This prevents misleading
+		// test results and surfaces configuration issues immediately.
+		az, err := c.extractAZWithCache(ctx, &pod, nodeCache)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract AZ for pod %s: %w", pod.Name, err)
 		}
@@ -109,27 +118,28 @@ func (c *Client) DiscoverPods(ctx context.Context, labelSelector string) ([]PodI
 	return result, nil
 }
 
-// extractAZ extracts the availability zone for a pod.
-// It first checks the pod's node selector for AZ labels.
-// If not found, it queries the node's labels.
-// Returns "unknown" if AZ cannot be determined from either source.
-func (c *Client) extractAZ(ctx context.Context, pod *corev1.Pod) (string, error) {
+// extractAZWithCache extracts the availability zone for a pod using a node label cache.
+// This reduces API calls from O(pods) to O(unique nodes) by caching node labels.
+func (c *Client) extractAZWithCache(ctx context.Context, pod *corev1.Pod, nodeCache map[string]string) (string, error) {
 	// Try to get AZ from pod's node selector first (faster, no API call)
-	// Try standard topology label
 	if zone, ok := pod.Spec.NodeSelector["topology.kubernetes.io/zone"]; ok {
 		return zone, nil
 	}
-
-	// Try legacy label
 	if zone, ok := pod.Spec.NodeSelector["failure-domain.beta.kubernetes.io/zone"]; ok {
 		return zone, nil
 	}
 
-	// If not in node selector, query the node for AZ labels
+	// If not in node selector, check cache first before querying API
 	if pod.Spec.NodeName == "" {
 		return "", fmt.Errorf("pod has no node assigned")
 	}
 
+	// Check cache
+	if cachedAZ, ok := nodeCache[pod.Spec.NodeName]; ok {
+		return cachedAZ, nil
+	}
+
+	// Cache miss - query node and update cache
 	node, err := c.clientset.CoreV1().Nodes().Get(ctx, pod.Spec.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to get node %s: %w", pod.Spec.NodeName, err)
@@ -137,14 +147,25 @@ func (c *Client) extractAZ(ctx context.Context, pod *corev1.Pod) (string, error)
 
 	// Try standard topology label on node
 	if zone, ok := node.Labels["topology.kubernetes.io/zone"]; ok {
+		nodeCache[pod.Spec.NodeName] = zone
 		return zone, nil
 	}
 
 	// Try legacy label on node
 	if zone, ok := node.Labels["failure-domain.beta.kubernetes.io/zone"]; ok {
+		nodeCache[pod.Spec.NodeName] = zone
 		return zone, nil
 	}
 
 	// Could not determine AZ from pod or node
 	return "", fmt.Errorf("no availability zone label found on node %s (expected topology.kubernetes.io/zone or failure-domain.beta.kubernetes.io/zone)", pod.Spec.NodeName)
+}
+
+// extractAZ extracts the availability zone for a pod without caching.
+// This is kept for backwards compatibility with tests that use it directly.
+// It first checks the pod's node selector for AZ labels.
+// If not found, it queries the node's labels.
+func (c *Client) extractAZ(ctx context.Context, pod *corev1.Pod) (string, error) {
+	nodeCache := make(map[string]string)
+	return c.extractAZWithCache(ctx, pod, nodeCache)
 }
