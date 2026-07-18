@@ -26,7 +26,7 @@ COPY . .
 # Build tools and application
 RUN make tools && make build
 
-FROM gcr.io/distroless/base-debian12@sha256:937c7eaaf6f3f2d38a1f8c4aeff326f0c56e4593ea152e9e8f74d976dde52f56
+FROM gcr.io/distroless/base-debian12@sha256:348dac1808083ccc3366399d6db835875b4eaf7c9b694783f5a3f353c4b58a28
 COPY --from=builder /go/src/go-infrabin/go-infrabin /usr/local/bin/go-infrabin
 COPY --from=builder /envoy-preflight /envoy-preflight
 COPY --from=builder /grpc_health_probe /usr/local/bin/grpc_health_probe
