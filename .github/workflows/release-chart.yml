@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Configure Git
         run: |
@@ -18,9 +18,9 @@ jobs:
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v3.5
+        uses: azure/setup-helm@v5.0.1
         with:
-          version: v3.21.3
+          version: v4.2.3
 
       - env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}

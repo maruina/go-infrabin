@@ -12,15 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Set up Go 1.x
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@v7
       with:
         go-version: ^1.25
 
     - name: Check out code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Cache Go modules
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           ~/.cache/go-build
@@ -30,7 +30,7 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Install Protoc
-      uses: arduino/setup-protoc@v1
+      uses: arduino/setup-protoc@v3.0.0
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -64,7 +64,7 @@ jobs:
         echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
     - name: Check out code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Docker meta
       id: meta
