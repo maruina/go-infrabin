@@ -141,8 +141,10 @@ func newGatewayMux() *runtime.ServeMux {
 
 // Keep the standard "Grpc-Metadata-" and well known behaviour
 // All other headers are passed, also with grpcgateway- prefix
+// LegacyHeaderMatcher keeps the v2.33.0 behaviour where DefaultHeaderMatcher
+// no longer maps Grpc-Metadata- headers by stripping the prefix.
 func passThroughHeaderMatcher(key string) (string, bool) {
-	if grpcKey, ok := runtime.DefaultHeaderMatcher(key); ok {
+	if grpcKey, ok := runtime.LegacyHeaderMatcher(key); ok {
 		return grpcKey, ok
 	}
 	return runtime.MetadataPrefix + key, true
