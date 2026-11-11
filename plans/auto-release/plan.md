@@ -5,7 +5,7 @@
 **Goal:** Every merge to `master` that warrants a release automatically produces a tag, GitHub release notes, Docker images, GoReleaser binaries, and an OCI Helm chart, with renovate PRs auto-merging when `Build` passes.
 **Smallest user-feedback slice:** One PR (`.releaserc.json`, rewritten `release.yml`, `renovate.json` edits, README updates, three workflow deletions); after merge, the first conventional squash merge produces a full release in one workflow run.
 **Out of Scope:** Deleting `origin/gh-pages` (follow-up); daily release batching; author-based (bot versus human) bump classification; chart `appVersion` automation beyond release-time sync; keeping the gh-pages classic Helm repository.
-**Architecture:** semantic-release runs on every push to `master`, computes the next version from commit types since the last tag, and publishes the tag plus release notes through `@semantic-release/github`. Conditional steps in the same job fetch the new tag, build and push Docker images with buildx, run GoReleaser for binaries, sync `Chart.yaml` with `yq`, and push the packaged chart as an OCI artifact to ghcr.io. Renovate emits `chore(deps):` commit titles and auto-merges when `Build` passes.
+**Architecture:** semantic-release runs on every push to `master`, computes the next version from commit types since the last tag, and publishes the tag plus release notes through `@semantic-release/github`. Conditional steps in the same job build and push Docker images with buildx, run GoReleaser for binaries, sync `Chart.yaml` with `yq`, and push the packaged chart as an OCI artifact to ghcr.io. Renovate emits `chore(deps):` commit titles and auto-merges when `Build` passes.
 **Tech Stack:** semantic-release (`cycjimmy/semantic-release-action` v8), GitHub Actions, GoReleaser, docker buildx, Helm (OCI push), yq, Renovate.
 
 ---
@@ -29,7 +29,7 @@ No `.go`, `.sh`, or Terraform files change, and `skill-loader` defines no best-p
 | Component | Files | Responsibility | Verification |
 |---|---|---|---|
 | Release analysis configuration | `.releaserc.json` | Define `master` as the release branch, the three plugins, and the `chore` → `patch` release rule | Local `semantic-release --dry-run` (Task 1) |
-| Release workflow | `.github/workflows/release.yml` | Trigger on push to `master`; run semantic-release; conditionally chain tag fetch, image builds, GoReleaser, chart sync and OCI push | `actionlint` (Task 5) plus first post-merge run |
+| Release workflow | `.github/workflows/release.yml` | Trigger on push to `master`; run semantic-release; conditionally chain image builds, GoReleaser, chart sync and OCI push | `actionlint` (Task 5) plus first post-merge run |
 | Renovate configuration | `renovate.json` | Emit `chore(deps):` commit titles; auto-merge `major` updates | `npx renovate-config-validator` (Task 3) |
 | Removed legacy workflows | `.github/workflows/release-drafter.yaml`, `.github/release-drafter.yml`, `.github/workflows/release-chart.yml` | No longer draft notes or publish to gh-pages | Files absent after Task 4; `gh-pages` stops updating (Task 7) |
 | Documentation | `README.md`, `charts/go-infrabin/README.md` | Fix the broken chart README link; document OCI installation | Link resolves; commands match the pushed artifact (Task 6) |
@@ -42,9 +42,10 @@ Consumers of shared state: `charts/go-infrabin/Chart.yaml` is read by `ct.yaml`-
 2. **`chore` → `patch` release rule.** Renovate with `semanticCommits: "enabled"` emits `chore(deps): ...`, so dependency-only merge windows release as patch. Rejected alternative: no rule — benefit is stricter control; rejected because renovate-only windows would then never release, which is the current manual bottleneck.
 3. **Renovate `major` auto-merge.** Accepted risk per the maintainer: CI (`Build`) is the only gate. Revisit trigger: the first major update that breaks `Build` after merge and forces a revert.
 4. **Explicit plugins array in `.releaserc.json` without `@semantic-release/npm`.** The repository has no `package.json`; the default npm plugin fails with `ENOPKG` even in dry-run. The action pre-installs the three configured plugins, so no `extra_plugins` input is needed. Rejected alternative: adding a stub `package.json` — benefit is tooling compatibility; rejected as scope creep.
-5. **Tag fetch before GoReleaser.** The workflow checkout does not contain the tag semantic-release created mid-job, and GoReleaser requires the tag on the checked-out commit, so a `git fetch origin <tag>` step runs after the semantic-release step.
+5. **No tag-fetch step.** semantic-release tags the checked-out HEAD locally (`git tag` runs in the job workspace) and pushes the tag, so GoReleaser sees the tag on the current commit without an extra fetch. Rejected alternative: a `git fetch origin <tag>` step — benefit is resilience if semantic-release stops tagging locally; rejected because the tag is already present and fetching an identical ref is a no-op.
 6. **OCI chart artifact location.** `helm push` targets `oci://ghcr.io/maruina`, so the artifact lands at `ghcr.io/maruina/go-infrabin` (the chart name supplies the final path segment), where the Docker image already lives as a separate artifact type. Chart `version` has no `v` prefix; `appVersion` carries `v` (matches the existing `appVersion: v3.8.0`).
 7. **Neutral task commit types.** Because `chore` now releases as patch, all PR commits use `ci:` or `docs:` types, which release nothing; the first release comes from the squash-merge title the maintainer chooses (a `feat:` title gives `v3.9.0`).
+8. **Serialize Release runs.** Renovate auto-merge can merge several PRs in quick succession; a run that starts before the previous run's tag landed computes the same version and fails at `git push --tags`. A `concurrency` group queues runs instead, so each run sees the tags the previous run pushed.
 
 ### Implementation Constraints
 
@@ -62,14 +63,14 @@ Consumers of shared state: `charts/go-infrabin/Chart.yaml` is read by `ct.yaml`-
 ### Failure Modes to Handle
 
 - **`ENOPKG` from the npm plugin** — prevented by the explicit plugins array (Decision 4).
-- **GoReleaser fails with no tag** — prevented by the tag fetch step (Decision 5); step order is a first-run proof, not something `actionlint` catches.
+- **GoReleaser fails with no tag** — impossible: semantic-release tags the checked-out HEAD locally before the conditional block runs (Decision 5). Step order is a first-run proof, not something `actionlint` catches.
 - **Chart push rejected by ghcr.io** — prevented by `helm registry login` with `GITHUB_TOKEN` before `helm push`; requires `packages: write`.
 - **Repeated chart version on workflow re-run** — impossible: a re-run publishes no new version, `new_release_published` is `"false"`, and the conditional block is skipped.
 - **Unconventional merge title produces no release silently** — fail-closed by design; mitigated by the `feat:`/`fix:` title discipline, the Task 1 dry-run, and the post-merge check that a release exists (Requirement 1).
 
 ### Rollout and Rollback
 
-Owner: Matteo Ruina (maintainer). Rollout is the single merged PR; the first merge with a conventional title produces the first automated release, continuing from `v3.8.2` (never restarting at `v1`). Rollback: revert the PR — a revert merge titled `Revert ...` produces no release, manual `git tag && git push` continues to work, and already-published tags, images, and chart versions stay valid. `gh-pages` goes stale until the follow-up branch deletion.
+Owner: Matteo Ruina (maintainer). Rollout is the single merged PR; the first merge with a conventional title produces the first automated release, continuing from `v3.8.2` (never restarting at `v1`). Rollback: revert the PR — a revert merge titled `Revert ...` produces no release, manual `git tag && git push` continues to work, and already-published tags, images, and chart versions stay valid. `gh-pages` goes stale until the follow-up branch deletion. Partial-failure recovery: if the run fails after semantic-release published the tag and release (for example a transient `helm push` failure), re-running the workflow repairs nothing because `new_release_published` is `"false"`; publish the missing artifacts by hand against the existing tag with `goreleaser release --clean` and `helm package`/`helm push`.
 
 ### Test Strategy
 
@@ -141,15 +142,16 @@ The system SHALL validate the `chore` → `patch` rule and fail-closed behavior 
 **Delivers:** A validated release configuration that maps `chore(deps):` to a patch bump and ignores plain commit titles.
 **Blocked by:** None
 **Traces to:** "Commit types map to release levels"; "Release rules are validated before the first real release"
-**Files:** `.releaserc.json` (new)
+**Files:** `.releaserc.json` (new), `.gitignore` (edit)
 
 - [ ] Install the tooling without touching repository files: `npm install --no-save semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/github`. `deliberate:` latest plugin versions may differ from the action's bundled versions; rule-level validation is unaffected.
+- [ ] Add `node_modules/` to `.gitignore` so the dry-run tooling never shows as untracked files; include the change in the Task 1 commit.
 - [ ] Create `.releaserc.json` with `{"branches": ["master"], "plugins": ["@semantic-release/commit-analyzer", "@semantic-release/release-notes-generator", "@semantic-release/github"]}` — first without release rules.
-- [ ] Run the focused failing check: `git commit --allow-empty -m "chore(deps): dry-run probe" && GITHUB_TOKEN=$(gh auth token) npx semantic-release --dry-run --branches "$(git branch --show-current)"`; expect `There are no relevant changes, so no new version is released` (default angular rules do not release `chore`).
+- [ ] Run the focused failing check: `git commit --allow-empty -m "chore(deps): dry-run probe" && GITHUB_TOKEN=$(gh auth token) npx semantic-release --dry-run --branches "$(git branch --show-current)"`; expect `There are no relevant changes, so no new version is released` (default angular rules do not release `chore`). The `--branches` flag is load-bearing: the worktree branch is `maruina/auto-release`, not `master`, and semantic-release skips branches outside its configured list.
 - [ ] Add the smallest passing change: `"releaseRules": [{"type": "chore", "release": "patch"}]` inside the `@semantic-release/commit-analyzer` entry in `.releaserc.json`.
-- [ ] Rerun the dry-run command; expect `The next release version is 3.8.3` and tag `v3.8.3`.
+- [ ] Rerun the dry-run command; expect `Published release 3.8.3 on default channel` and `Skip v3.8.3 tag creation in dry-run mode`.
 - [ ] Remove the probe commit: `git reset --hard HEAD~1` (keep `node_modules` until Task 7 cleanup).
-- [ ] Run the dry-run again without the probe commit; expect no release (real history contains only `docs:`/`ci:` commits since `v3.8.2`).
+- [ ] Run the dry-run again without the probe commit; expect no release (the real history since `v3.8.2` contains only non-releasable commits: plain-titled renovate merges and `docs:` commits).
 - [ ] Commit with `ci: add semantic-release configuration`.
 
 ### Task 2: Rewrite `release.yml` around semantic-release
@@ -162,10 +164,10 @@ The system SHALL validate the `chore` → `patch` rule and fail-closed behavior 
 - [ ] Carry over, in order: `actions/checkout@v7` with `fetch-depth: 0` (full history and tags for semantic-release), `actions/setup-go@v7`, `docker/setup-qemu-action@v4`, `docker/setup-buildx-action@v4`, `arduino/setup-protoc@v3.0.0`, `make tools`, `make protoc`.
 - [ ] Add the semantic-release step `cycjimmy/semantic-release-action@v8` with `id: semantic`, env `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}`; no `extra_plugins` or `semantic_version` input (Decision 4).
 - [ ] Gate every following step with `if: steps.semantic.outputs.new_release_published == 'true'` (string comparison — verified against the action README).
-- [ ] Fetch the new tag so GoReleaser sees it: `git fetch origin "refs/tags/v${{ steps.semantic.outputs.new_release_version }}:refs/tags/v${{ steps.semantic.outputs.new_release_version }}"` (Decision 5).
+- [ ] Add `concurrency: {group: release, cancel-in-progress: false}` so merge bursts queue instead of racing the tag push (Decision 8).
 - [ ] Carry over the Docker Hub and ghcr.io logins; build and push with buildx (`platforms: linux/amd64,linux/arm64`) tagging `docker.io/maruina/go-infrabin:v${{ steps.semantic.outputs.new_release_version }}` and the ghcr.io equivalent (`v` prefix — the output is `3.8.3`, not `v3.8.3`); keep the `docker buildx imagetools inspect` checks.
-- [ ] Run GoReleaser (`goreleaser/goreleaser-action@v7.3.0`, `version: '~> v2'`, `args: release --clean`, env `GITHUB_TOKEN`) after the tag fetch.
-- [ ] Add chart publication: install `yq` (`curl -sL -o yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64`, `chmod +x`, move to `/usr/local/bin`); run `yq -i '.version = "${{ steps.semantic.outputs.new_release_version }}" | .appVersion = "v${{ steps.semantic.outputs.new_release_version }}"' charts/go-infrabin/Chart.yaml`; add `azure/setup-helm@v5.1.0`; run `helm registry login ghcr.io -u ${{ github.repository_owner }} --password ${{ secrets.GITHUB_TOKEN }}`; run `helm package charts/go-infrabin`; run `helm push go-infrabin-${{ steps.semantic.outputs.new_release_version }}.tgz oci://ghcr.io/maruina` (Decision 6).
+- [ ] Run GoReleaser (`goreleaser/goreleaser-action@v7.3.0`, `version: '~> v2'`, `args: release --clean`, env `GITHUB_TOKEN`) after the semantic-release step; the tag is already on the checked-out HEAD (Decision 5).
+- [ ] Add chart publication: install `yq` (`curl -sL -o yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64`, `chmod +x`, move to `/usr/local/bin`); run `yq -i '.version = "${{ steps.semantic.outputs.new_release_version }}" | .appVersion = "v${{ steps.semantic.outputs.new_release_version }}"' charts/go-infrabin/Chart.yaml`; add `azure/setup-helm@v5.1.0`; login with `echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.repository_owner }} --password-stdin`; run `helm package charts/go-infrabin`; run `helm push go-infrabin-${{ steps.semantic.outputs.new_release_version }}.tgz oci://ghcr.io/maruina` (Decision 6).
 - [ ] Commit with `ci: chain GoReleaser and OCI chart push after semantic-release`.
 
 ### Task 3: Configure renovate semantic commits and major automerge
@@ -186,6 +188,7 @@ The system SHALL validate the `chore` → `patch` rule and fail-closed behavior 
 **Files:** `.github/workflows/release-drafter.yaml`, `.github/release-drafter.yml`, `.github/workflows/release-chart.yml` (delete); `README.md`, `charts/go-infrabin/README.md` (edit)
 
 - [ ] `git rm .github/workflows/release-drafter.yaml .github/release-drafter.yml .github/workflows/release-chart.yml`; keep `lint-chart.yml`, `ct.yaml`, and the pre-commit chart hooks untouched.
+- [ ] Delete the stale release-drafter draft release so it cannot collide with the first `v3.8.3` release: list drafts with `gh api repos/maruina/go-infrabin/releases --jq '.[] | select(.draft) | "\(.id) \(.tag_name)"'`, then `gh api -X DELETE repos/maruina/go-infrabin/releases/<id>`; re-run the listing and expect no draft releases.
 - [ ] In `README.md`, fix the chart README link from `./chart/go-infrabin/README.md` to `./charts/go-infrabin/README.md` and add an Installation section pointing at `charts/go-infrabin/README.md` with the OCI command `helm install go-infrabin oci://ghcr.io/maruina/go-infrabin --version <chart-version>` (no `v` prefix).
 - [ ] In `charts/go-infrabin/README.md`, replace the `helm repo add` block with the OCI install command, and replace the "Adding a new version" instructions (`helm package` + `helm repo index`) with a note that the release workflow packages and pushes the chart on every release. Leave the generated Values table and the KIND testing section untouched.
 - [ ] Commit with `ci: remove release-drafter and chart-releaser workflows` and `docs: document OCI chart installation`.
@@ -215,7 +218,12 @@ The system SHALL validate the `chore` → `patch` rule and fail-closed behavior 
 - [ ] Remove dry-run tooling: `rm -rf node_modules package-lock.json`; confirm `git status` shows no untracked tooling files.
 - [ ] The following feature-level acceptance criteria only the merged feature can satisfy, observed post-merge (Task 2's first real run and subsequent merges):
   - A `fix:` squash merge produces tag, release notes, both images, GoReleaser binaries, and the OCI chart in one run (Requirement 1).
+  - The release page shows exactly one entry for the first published version and no stale release-drafter drafts (Requirement 1).
   - A renovate-only merge window produces a patch release; `feat:` produces minor; `feat!:` produces major (Requirement 2).
   - A renovate PR, including a major update, merges itself when `Build` passes; record the observed merge mechanism (GitHub native auto-merge versus renovate self-merge) in the PR (Requirement 3).
   - `origin/gh-pages` receives no new commits after the switch; its deletion is the recorded follow-up (Requirement 4).
   - `helm pull oci://ghcr.io/maruina/go-infrabin --version <chart-version>` and `helm template` render succeeds (Requirement 1).
+
+## Learning candidates
+
+- 2026-11-11: The plan's Decision 5 premise was wrong — semantic-release tags the checked-out HEAD locally in the CI workspace and pushes the tag itself, so the checkout already contains the tag and the planned `git fetch origin <tag>` step was a no-op; the review removed the step. Evidence: semantic-release `index.js` calls `tag()` then `push()` before the publish plugins (https://github.com/semantic-release/semantic-release/blob/main/index.js); read during /systematic-review.
