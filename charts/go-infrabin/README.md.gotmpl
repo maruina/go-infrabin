@@ -4,38 +4,17 @@
 
 ## Installing the Chart
 
-Add the go-infrabin repo:
+Install the chart from the `ghcr.io` OCI registry:
 
 ```console
-helm repo add go-infrabin 'https://maruina.github.io/go-infrabin'
-helm repo update
+helm install go-infrabin oci://ghcr.io/maruina/go-infrabin --version <chart-version>
 ```
-
-Install the chart with the release name `goinfra`:
-
-1. Create the `infrabin` namespace:
-
-    ```console
-    kubectl create namespace infrabin
-    ```
-
-1. Run `helm install`:
-
-    ```console
-
-    helm upgrade -i goinfra go-infrabin/go-infrabin \
-    --set image.tag=latest
-    --namespace infrabin
-    ```
 
 ## Developing
 
-### Adding a new version
+### Chart versions
 
-```console
-helm package go-infrabin
-helm repo index .
-```
+The release workflow packages the chart and pushes it to `ghcr.io/maruina/go-infrabin` on every release. It syncs the chart `version` and `appVersion` with the released application version, so no manual packaging is needed.
 
 ### Testing
 
