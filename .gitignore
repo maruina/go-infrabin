@@ -31,3 +31,6 @@ pkg/infrabin/openapi.swagger.json
 
 # Ignore vendored directory
 vendor
+
+# Ignore semantic-release dry-run tooling
+node_modules/
