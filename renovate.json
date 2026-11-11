@@ -2,12 +2,18 @@
   "extends": [
     "config:recommended"
   ],
+  "semanticCommits": "enabled",
   "labels": [
     "dependencies"
   ],
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    },
+    {
+      "description": "Automerge major updates when Build passes; accepted risk: an update that breaks Build after merge forces a revert",
+      "matchUpdateTypes": ["major"],
       "automerge": true
     },
     {
