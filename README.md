@@ -17,7 +17,13 @@
 
 ## Installation
 
-See the [README](./chart/go-infrabin/README.md).
+Install the chart from the `ghcr.io` OCI registry:
+
+```console
+helm install go-infrabin oci://ghcr.io/maruina/go-infrabin --version <chart-version>
+```
+
+The release workflow publishes the chart on every release. See the [chart README](./charts/go-infrabin/README.md) for values, development, and testing instructions.
 
 ## Command line flags
 
