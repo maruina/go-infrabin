@@ -1,3 +1,5 @@
 chart-dirs:
   - charts
 target-branch: master
+# The release workflow syncs the chart version at release time; Chart.yaml in git stays unchanged
+check-version-increment: false
